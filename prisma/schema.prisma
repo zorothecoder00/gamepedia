@@ -1,0 +1,605 @@
+// ============================================================
+// GAMEPEDIA TG — Schéma Prisma
+// Plateforme esports du Togo (style Liquipedia)
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum Role {
+  ADMIN
+  MODERATOR
+  PLAYER
+  VISITOR
+}
+
+/// Format de jeu principal
+enum GameFormat {
+  FIVE_VS_FIVE    // Valorant, CS2, League of Legends
+  ONE_VS_ONE      // FIFA, Tennis esport
+  TWO_VS_TWO
+  FOUR_VS_FOUR
+  BATTLE_ROYALE   // PUBG Mobile, Free Fire
+  MOBA            // Mobile Legends, Dota 2
+  FREE_FOR_ALL    // Racing, battle royale solo
+}
+
+/// Format du tournoi
+enum TournamentFormat {
+  SINGLE_ELIMINATION
+  DOUBLE_ELIMINATION
+  ROUND_ROBIN
+  SWISS
+  MIXED // Groupes + Élimination directe
+}
+
+/// Niveau d'importance du tournoi (pour le calcul des points)
+enum TournamentTier {
+  S // Tournoi national majeur, prize pool élevé
+  A // Tournoi régional important
+  B // Tournoi communautaire régulier
+  C // Tournoi amateur / qualificatif
+}
+
+enum TournamentStatus {
+  UPCOMING
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum MatchStatus {
+  SCHEDULED
+  ONGOING
+  COMPLETED
+  FORFEITED  // Forfait
+  CANCELLED
+}
+
+enum ParticipantType {
+  TEAM
+  SOLO
+}
+
+// ============================================================
+// AUTHENTIFICATION & UTILISATEURS
+// ============================================================
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  username     String   @unique
+  passwordHash String
+  role         Role     @default(VISITOR)
+  avatar       String?
+  isActive     Boolean  @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  player Player?
+
+  @@map("users")
+}
+
+// ============================================================
+// JOUEURS
+// ============================================================
+
+model Player {
+  id        String  @id @default(cuid())
+  userId    String? @unique
+  user      User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Identité
+  pseudo     String  @unique
+  firstName  String?
+  lastName   String?
+  birthDate  DateTime?
+
+  // Localisation
+  city       String? // Lomé, Kara, Sokodé, Atakpamé...
+  region     String? // Maritime, Centrale, Savanes...
+
+  // Profil public
+  bio         String?
+  avatar      String?
+  banner      String?
+  socialLinks Json? // { discord, twitter, youtube, twitch, tiktok }
+
+  // Statut
+  isActive   Boolean @default(true)
+  isVerified Boolean @default(false) // vérifié par un admin
+
+  // Nationalité (pour évolution future multi-pays)
+  nationality String @default("TG")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  gameProfiles              PlayerGameProfile[]
+  teamMemberships           TeamMember[]
+  matchPerformances         PlayerMatchPerformance[]
+  rankingEntries            RankingEntry[]
+  achievements              PlayerAchievement[]
+  soloTournamentEntries     TournamentParticipant[]  @relation("SoloParticipant")
+  pointAttributions         PointAttribution[]       @relation("PlayerPointAttribution")
+
+  @@map("players")
+}
+
+/// Profil d'un joueur dans un jeu spécifique
+model PlayerGameProfile {
+  id       String @id @default(cuid())
+  playerId String
+  player   Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  gameId   String
+  game     Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  inGameName String? // Pseudo in-game (peut être différent du pseudo principal)
+  rank       String? // Rang dans le jeu (Radiant, Predator, Global Elite...)
+  server     String? // Serveur de jeu (EU, AS, AFR...)
+  extraData  Json?   // Données supplémentaires spécifiques au jeu
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([playerId, gameId])
+  @@map("player_game_profiles")
+}
+
+// ============================================================
+// JEUX
+// ============================================================
+
+model Game {
+  id          String     @id @default(cuid())
+  name        String     @unique // "Valorant", "FIFA 25", "Free Fire"
+  slug        String     @unique // "valorant", "fifa-25", "free-fire"
+  description String?
+  genre       String? // "FPS", "MOBA", "Sports", "Battle Royale"
+  format      GameFormat
+  logo        String?
+  banner      String?
+  coverImage  String?
+  isActive    Boolean    @default(true)
+
+  // Plateforme
+  platforms String? // "PC", "Mobile", "Console", "PC,Mobile"
+
+  // Éditeur
+  publisher String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  playerProfiles    PlayerGameProfile[]
+  tournamentGames   TournamentGame[]
+  rankingEntries    RankingEntry[]
+  pointRules        PointRule[]
+  seasons           Season[]
+
+  @@map("games")
+}
+
+// ============================================================
+// ÉQUIPES
+// ============================================================
+
+model Team {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  slug        String  @unique
+  tag         String // Sigle ex: "TGO", "LMG", "GEN"
+  logo        String?
+  banner      String?
+  description String?
+
+  // Localisation
+  city   String?
+  region String?
+
+  foundedAt   DateTime?
+  isActive    Boolean   @default(true)
+  socialLinks Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  members                  TeamMember[]
+  tournamentParticipations TournamentParticipant[]  @relation("TeamParticipant")
+  matchParticipations      MatchParticipant[]
+  pointAttributions        PointAttribution[]       @relation("TeamPointAttribution")
+  rankingEntries           RankingEntry[]
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id       String @id @default(cuid())
+  teamId   String
+  team     Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  playerId String
+  player   Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  role     String? // "IGL", "Entry Fragger", "Support", "Coach", "Manager"
+  joinedAt DateTime @default(now())
+  leftAt   DateTime?
+  isActive Boolean  @default(true)
+
+  @@unique([teamId, playerId, joinedAt])
+  @@map("team_members")
+}
+
+// ============================================================
+// TOURNOIS
+// ============================================================
+
+model Tournament {
+  id          String  @id @default(cuid())
+  name        String
+  slug        String  @unique
+  edition     Int     @default(1) // 1ère édition, 2ème édition...
+  description String?
+  rules       String? // Règlement complet (Markdown)
+
+  // Format & participants
+  format          TournamentFormat
+  participantType ParticipantType
+  maxParticipants Int?
+  minParticipants Int?
+
+  // Tier (pour calcul des points)
+  tier TournamentTier @default(C)
+
+  // Localisation & dates
+  location             String?  // "Lomé, Togo" | "En ligne"
+  venue                String?  // Nom de la salle/lieu précis
+  isOnline             Boolean  @default(false)
+  startDate            DateTime
+  endDate              DateTime?
+  registrationDeadline DateTime?
+  checkInStart         DateTime?
+
+  // Prize pool
+  prizePool         Float? // Montant total (en monnaie indiquée)
+  currency          String @default("XOF") // XOF = Franc CFA
+  prizeDistribution Json? // { "1": 50, "2": 30, "3": 10, "4": 10 } pourcentages
+
+  // Statut
+  status TournamentStatus @default(UPCOMING)
+
+  // Médias
+  logo      String?
+  banner    String?
+  streamUrl String? // Lien de diffusion en direct
+  vodUrl    String? // VOD du tournoi
+
+  // Organisation
+  organizerName String?
+  organizerLogo String?
+  sponsors      Json? // [{ name, logo, url }]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  games              TournamentGame[]
+  participants       TournamentParticipant[]
+  stages             TournamentStage[]
+  pointAttributions  PointAttribution[]
+
+  @@map("tournaments")
+}
+
+/// Jeux joués dans un tournoi (tournoi multi-jeux possible)
+model TournamentGame {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  gameId       String
+  game         Game       @relation(fields: [gameId], references: [id])
+
+  @@unique([tournamentId, gameId])
+  @@map("tournament_games")
+}
+
+model TournamentParticipant {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  // Soit équipe soit joueur solo
+  teamId   String?
+  team     Team?   @relation("TeamParticipant", fields: [teamId], references: [id])
+  playerId String?
+  player   Player? @relation("SoloParticipant", fields: [playerId], references: [id])
+
+  // Résultat final
+  finalPlacement Int? // 1er, 2ème, 3ème...
+  isEliminated   Boolean @default(false)
+  prizeWon       Float?  // Montant gagné
+
+  // Inscription
+  seed        Int? // Tête de série
+  isConfirmed Boolean  @default(false)
+  registeredAt DateTime @default(now())
+
+  @@unique([tournamentId, teamId])
+  @@unique([tournamentId, playerId])
+  @@map("tournament_participants")
+}
+
+// ============================================================
+// PHASES & MATCHS
+// ============================================================
+
+model TournamentStage {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  name        String // "Phase de groupes", "Quarts de finale", "Finale"
+  stageNumber Int    // Ordre d'exécution : 1, 2, 3...
+  format      TournamentFormat
+  bestOf      Int      @default(1) // BO1, BO3, BO5
+
+  startDate DateTime?
+  endDate   DateTime?
+  isActive  Boolean   @default(false)
+
+  matches Match[]
+
+  @@map("tournament_stages")
+}
+
+model Match {
+  id      String          @id @default(cuid())
+  stageId String
+  stage   TournamentStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+
+  matchNumber Int? // Numéro du match dans la phase
+  round       Int? // Round (pour bracket)
+
+  scheduledAt DateTime?
+  startedAt   DateTime?
+  endedAt     DateTime?
+
+  status    MatchStatus @default(SCHEDULED)
+  streamUrl String?
+  vodUrl    String?
+
+  // Notes (résumé du match, analyse)
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  participants       MatchParticipant[]
+  playerPerformances PlayerMatchPerformance[]
+
+  @@map("matches")
+}
+
+model MatchParticipant {
+  id      String @id @default(cuid())
+  matchId String
+  match   Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  // Participant (équipe ou joueur)
+  teamId String?
+  team   Team?   @relation(fields: [teamId], references: [id])
+
+  score    Int?     // Score final (rounds gagnés, buts marqués, kills...)
+  isWinner Boolean?
+  isForfeit Boolean @default(false)
+
+  @@unique([matchId, teamId])
+  @@map("match_participants")
+}
+
+/// Performances individuelles par match (stats détaillées)
+model PlayerMatchPerformance {
+  id       String @id @default(cuid())
+  matchId  String
+  match    Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  playerId String
+  player   Player @relation(fields: [playerId], references: [id])
+
+  // Stats JSON — flexibles selon le jeu
+  // Exemple Valorant : { kills, deaths, assists, acs, adr, hs_percent }
+  // Exemple FIFA     : { goals, assists, possession }
+  // Exemple Free Fire: { kills, damage, survivalTime, placement }
+  stats Json
+
+  isMvp   Boolean @default(false)
+  teamId  String? // Équipe du joueur lors de ce match
+
+  @@unique([matchId, playerId])
+  @@map("player_match_performances")
+}
+
+// ============================================================
+// SAISONS
+// ============================================================
+
+/// Une saison délimite une période de compétition pour un jeu donné.
+/// Les points accumulés pendant une saison définissent le classement saisonnier.
+model Season {
+  id     String  @id @default(cuid())
+  gameId String
+  game   Game    @relation(fields: [gameId], references: [id])
+  name   String // "Saison 1 - 2025", "Hivernale 2025"
+  year   Int
+  quarter Int?  // 1, 2, 3, 4 (optionnel — saisons trimestrielles)
+
+  startDate DateTime
+  endDate   DateTime?
+  isActive  Boolean   @default(false)
+
+  pointRules        PointRule[]
+  rankingEntries    RankingEntry[]
+  pointAttributions PointAttribution[]
+
+  @@unique([gameId, year, name])
+  @@map("seasons")
+}
+
+// ============================================================
+// SYSTÈME DE POINTS & CLASSEMENT
+// ============================================================
+
+/// Règle définissant combien de points rapporte une place dans un tournoi
+model PointRule {
+  id       String  @id @default(cuid())
+  gameId   String
+  game     Game    @relation(fields: [gameId], references: [id])
+  seasonId String?
+  season   Season? @relation(fields: [seasonId], references: [id])
+
+  // Condition
+  placement     Int            // 1 = 1er, 2 = 2ème, etc.
+  tier          TournamentTier // Tier du tournoi auquel cette règle s'applique
+  pointsAwarded Int            // Points de base attribués
+
+  // Multiplicateur selon le format
+  // Ex : BO5 Finale = x1.5
+  formatMultiplier Float @default(1.0)
+
+  description String?
+
+  @@unique([gameId, seasonId, placement, tier])
+  @@map("point_rules")
+}
+
+/// Attribution effective de points après un tournoi
+model PointAttribution {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  seasonId     String?
+  season       Season?    @relation(fields: [seasonId], references: [id])
+
+  // Bénéficiaire (équipe OU joueur, selon le type de tournoi)
+  teamId   String?
+  team     Team?   @relation("TeamPointAttribution", fields: [teamId], references: [id])
+  playerId String?
+  player   Player? @relation("PlayerPointAttribution", fields: [playerId], references: [id])
+
+  placement    Int
+  basePoints   Int
+  multiplier   Float @default(1.0)
+  finalPoints  Int   // basePoints × multiplier, arrondi
+  prizeWon     Float?
+
+  note      String? // Explication manuelle si besoin
+  createdAt DateTime @default(now())
+
+  @@map("point_attributions")
+}
+
+/// Classement calculé par jeu et par saison
+model RankingEntry {
+  id       String  @id @default(cuid())
+  gameId   String
+  game     Game    @relation(fields: [gameId], references: [id])
+  seasonId String?
+  season   Season? @relation(fields: [seasonId], references: [id])
+
+  // Classé individuel OU équipe
+  playerId String?
+  player   Player? @relation(fields: [playerId], references: [id])
+  teamId   String?
+  team     Team?   @relation(fields: [teamId], references: [id])
+
+  // Cumuls
+  totalPoints      Int   @default(0)
+  totalPrizeMoney  Float @default(0)
+  tournamentsPlayed Int  @default(0)
+  wins             Int   @default(0)     // Tournois gagnés
+  top3Finishes     Int   @default(0)
+  averagePlacement Float?
+
+  // Position calculée (mis à jour périodiquement)
+  rank      Int?
+  prevRank  Int? // Classement précédent (pour afficher +/- de mouvement)
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([gameId, seasonId, playerId])
+  @@unique([gameId, seasonId, teamId])
+  @@map("ranking_entries")
+}
+
+// ============================================================
+// ACHIEVEMENTS & RÉCOMPENSES
+// ============================================================
+
+model Achievement {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String
+  icon        String?
+  category    String? // "Palmares", "Participation", "Special", "Milestone"
+  rarity      String? // "Commun", "Rare", "Epique", "Légendaire"
+
+  playerAchievements PlayerAchievement[]
+
+  @@map("achievements")
+}
+
+model PlayerAchievement {
+  id            String      @id @default(cuid())
+  playerId      String
+  player        Player      @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+
+  awardedAt   DateTime @default(now())
+  context     String?  // Ex: "Champion Valorant Cup Lomé 2025"
+  tournamentId String?
+
+  @@unique([playerId, achievementId])
+  @@map("player_achievements")
+}
+
+// ============================================================
+// NEWS & CONTENU ÉDITORIAL
+// ============================================================
+
+model Article {
+  id        String  @id @default(cuid())
+  title     String
+  slug      String  @unique
+  excerpt   String?
+  content   String  // Markdown
+  coverImage String?
+
+  authorId  String?
+  // Pas de FK forte vers User pour flexibilité
+  authorName String?
+
+  // Tags
+  tags    String[] // ["valorant", "tournoi", "lomé"]
+
+  isPublished Boolean  @default(false)
+  publishedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("articles")
+}

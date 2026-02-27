@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+:root {
+  /* Palette principale — GamePedia TG */
+  --bg-primary: #09090f;
+  --bg-secondary: #111120;
+  --bg-card: #15152a;
+  --bg-card-hover: #1c1c35;
+
+  --accent-green: #00e676;
+  --accent-green-dim: #00c864;
+  --accent-gold: #ffd700;
+  --accent-gold-dim: #e6b800;
+  --accent-red: #ff4444;
+  --accent-blue: #4fc3f7;
+
+  /* Tiers de tournoi */
+  --tier-s: #ff6b35;
+  --tier-a: #9b59b6;
+  --tier-b: #3498db;
+  --tier-c: #7f8c8d;
+
+  --text-primary: #f0f0f8;
+  --text-secondary: #9090b0;
+  --text-muted: #5a5a7a;
+
+  --border: #1e1e3a;
+  --border-bright: #2e2e55;
+}
+
+@theme inline {
+  --color-background: var(--bg-primary);
+  --color-foreground: var(--text-primary);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-geist-sans, Arial, Helvetica, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Scrollbar personnalisée */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-bright);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Sélection de texte */
+::selection {
+  background: rgba(0, 230, 118, 0.25);
+  color: var(--text-primary);
+}
