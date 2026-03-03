@@ -1,0 +1,3 @@
+ ■ Créer les pages /profile et /admin
+  □ Créer les routes API
+  □ Créer les pages d'erreur 404 et erreur générale
