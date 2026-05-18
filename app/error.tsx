@@ -1,0 +1,58 @@
+"use client";
+
+import { useEffect } from "react";
+import Link from "next/link";
+
+export default function GlobalError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  useEffect(() => {
+    console.error(error);
+  }, [error]);
+
+  return (
+    <div className="min-h-[70vh] flex flex-col items-center justify-center px-6 text-center">
+      <div className="relative mb-8">
+        <p className="text-[9rem] font-black leading-none select-none"
+          style={{ color: "transparent", WebkitTextStroke: "2px var(--border-bright)" }}>
+          500
+        </p>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-4xl">⚠️</span>
+        </div>
+      </div>
+
+      <h1 className="text-2xl font-black text-[var(--text-primary)] mb-3">
+        Une erreur est survenue
+      </h1>
+      <p className="text-sm text-[var(--text-secondary)] max-w-sm mb-2 leading-relaxed">
+        Quelque chose s&apos;est mal passé côté serveur. Notre équipe a été notifiée.
+      </p>
+      {error.digest && (
+        <p className="text-xs text-[var(--text-muted)] mb-8 font-mono">
+          Ref : {error.digest}
+        </p>
+      )}
+      {!error.digest && <div className="mb-8" />}
+
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <button
+          onClick={reset}
+          className="px-6 py-3 rounded-xl text-sm font-bold text-black bg-[var(--accent-green)] hover:opacity-90 transition-opacity"
+        >
+          Réessayer
+        </button>
+        <Link
+          href="/"
+          className="px-6 py-3 rounded-xl text-sm font-medium border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+        >
+          Retour à l&apos;accueil
+        </Link>
+      </div>
+    </div>
+  );
+}
