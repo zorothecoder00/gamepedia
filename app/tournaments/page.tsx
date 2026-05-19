@@ -1,206 +1,120 @@
+"use client";
+import { useState } from "react";
 import TournamentCard, { TournamentCardData } from "../components/TournamentCard";
+import { useApi } from "@/hooks/useApi";
 
-const tournaments: TournamentCardData[] = [
-  {
-    slug: "national-championship-2025",
-    name: "National Championship 2025",
-    game: "Valorant",
-    tier: "S",
-    status: "UPCOMING",
-    startDate: "2025-06-01",
-    endDate: "2025-06-15",
-    prizePool: 1000000,
-    currency: "XOF",
-    participantCount: 12,
-    maxParticipants: 16,
-    location: "Lomé, Togo",
-  },
-  {
-    slug: "free-fire-open-2025",
-    name: "Free Fire Open 2025",
-    game: "Free Fire",
-    tier: "A",
-    status: "ONGOING",
-    startDate: "2025-03-01",
-    endDate: "2025-03-30",
-    prizePool: 500000,
-    currency: "XOF",
-    participantCount: 32,
-    maxParticipants: 32,
-    location: "En ligne",
-  },
-  {
-    slug: "valorant-cup-lome-2025",
-    name: "Valorant Cup Lomé 2025",
-    game: "Valorant",
-    tier: "A",
-    status: "COMPLETED",
-    startDate: "2025-03-15",
-    endDate: "2025-03-20",
-    prizePool: 300000,
-    currency: "XOF",
-    participantCount: 8,
-    location: "Lomé, Togo",
-  },
-  {
-    slug: "fifa-cup-2025",
-    name: "FIFA Cup Lomé 2025",
-    game: "FIFA 25",
-    tier: "B",
-    status: "UPCOMING",
-    startDate: "2025-05-10",
-    endDate: "2025-05-11",
-    prizePool: 150000,
-    currency: "XOF",
-    participantCount: 14,
-    maxParticipants: 16,
-    location: "Lomé, Togo",
-  },
-  {
-    slug: "mobile-legends-cup-2025",
-    name: "Mobile Legends Cup 2025",
-    game: "Mobile Legends",
-    tier: "B",
-    status: "UPCOMING",
-    startDate: "2025-04-20",
-    endDate: "2025-04-21",
-    prizePool: 200000,
-    currency: "XOF",
-    participantCount: 8,
-    maxParticipants: 8,
-    location: "Kara, Togo",
-  },
-  {
-    slug: "qualifier-q1-2025",
-    name: "Qualificatif Q1 2025",
-    game: "Valorant",
-    tier: "C",
-    status: "COMPLETED",
-    startDate: "2025-01-20",
-    endDate: "2025-01-21",
-    participantCount: 16,
-    location: "En ligne",
-  },
-  {
-    slug: "tekken-showdown-2024",
-    name: "Tekken Showdown 2024",
-    game: "Tekken 8",
-    tier: "C",
-    status: "COMPLETED",
-    startDate: "2024-12-10",
-    prizePool: 75000,
-    currency: "XOF",
-    participantCount: 24,
-    location: "Lomé, Togo",
-  },
-  {
-    slug: "pubg-mobile-challenge",
-    name: "PUBG Mobile Challenge",
-    game: "PUBG Mobile",
-    tier: "B",
-    status: "CANCELLED",
-    startDate: "2025-02-15",
-    participantCount: 6,
-    location: "En ligne",
-  },
-];
+interface ApiTournament {
+  id: string; slug: string; name: string;
+  tier: "S" | "A" | "B" | "C";
+  status: "UPCOMING" | "ONGOING" | "COMPLETED" | "CANCELLED";
+  startDate: string; endDate?: string;
+  prizePool?: number; currency?: string; location?: string;
+  games: { game: { name: string; slug: string } }[];
+  _count: { participants: number };
+}
 
-const statusFilters = [
+const STATUS_FILTERS = [
   { key: "all", label: "Tous" },
   { key: "UPCOMING", label: "À venir" },
   { key: "ONGOING", label: "En cours" },
   { key: "COMPLETED", label: "Terminé" },
 ];
 
-const tierFilters = ["Tous les tiers", "Tier S", "Tier A", "Tier B", "Tier C"];
-const gameFilters = ["Tous les jeux", "Valorant", "Free Fire", "FIFA 25", "Mobile Legends", "PUBG Mobile", "Tekken 8"];
-const yearFilters = ["Toutes les années", "2025", "2024"];
+const TIERS = ["S", "A", "B", "C"];
+const YEARS = ["2025", "2024", "2023"];
 
 export default function TournamentsPage() {
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [tierFilter, setTierFilter] = useState("");
+  const [gameFilter, setGameFilter] = useState("");
+  const [yearFilter, setYearFilter] = useState("");
+  const [page, setPage] = useState(1);
+
+  const params = new URLSearchParams();
+  if (statusFilter !== "all") params.set("status", statusFilter);
+  if (tierFilter) params.set("tier", tierFilter);
+  if (gameFilter) params.set("game", gameFilter);
+  if (yearFilter) params.set("year", yearFilter);
+  params.set("page", String(page));
+
+  const { data: tournaments, meta, loading } = useApi<ApiTournament[]>(
+    `/api/tournaments?${params.toString()}`,
+    [statusFilter, tierFilter, gameFilter, yearFilter, page],
+  );
+  const { data: games } = useApi<{ name: string; slug: string }[]>("/api/games");
+
+  const toCardData = (t: ApiTournament): TournamentCardData => ({
+    slug: t.slug, name: t.name, game: t.games?.[0]?.game.name ?? "—",
+    tier: t.tier, status: t.status, startDate: t.startDate, endDate: t.endDate,
+    prizePool: t.prizePool, currency: t.currency,
+    participantCount: t._count.participants, location: t.location,
+  });
+
   return (
-    <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "2rem 1.5rem" }}>
-      {/* Header */}
-      <div style={{ marginBottom: "2rem" }}>
-        <h1 style={{ color: "var(--text-primary)", fontSize: "2rem", fontWeight: 800, marginBottom: "0.5rem" }}>
-          Tournois
-        </h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem" }}>
-          {tournaments.length} tournois enregistrés sur GamePedia TG
+    <div className="max-w-[1280px] mx-auto px-6 py-8">
+      <div className="mb-8">
+        <h1 className="text-[2rem] font-black text-[var(--text-primary)] mb-2">Tournois</h1>
+        <p className="text-[0.95rem] text-[var(--text-secondary)]">
+          {loading ? "Chargement..." : `${meta?.total ?? 0} tournois enregistrés sur GamePedia TG`}
         </p>
       </div>
 
       {/* Status tabs */}
-      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
-        {statusFilters.map((f) => (
+      <div className="flex gap-2 mb-5 flex-wrap">
+        {STATUS_FILTERS.map((f) => (
           <button
             key={f.key}
-            style={{
-              padding: "0.4rem 1rem",
-              borderRadius: "6px",
-              border: "1px solid var(--border)",
-              background: f.key === "all" ? "var(--accent-green)" : "var(--bg-card)",
-              color: f.key === "all" ? "#000" : "var(--text-secondary)",
-              fontWeight: f.key === "all" ? 600 : 400,
-              fontSize: "0.85rem",
-              cursor: "pointer",
-            }}
+            onClick={() => { setStatusFilter(f.key); setPage(1); }}
+            className={`px-4 py-1.5 rounded-lg border border-[var(--border)] text-sm cursor-pointer transition-colors ${statusFilter === f.key ? "bg-[var(--accent-green)] text-black font-semibold" : "bg-[var(--bg-card)] text-[var(--text-secondary)]"}`}
           >
             {f.label}
-            {f.key !== "all" && (
-              <span
-                style={{
-                  marginLeft: "0.375rem",
-                  background: "rgba(255,255,255,0.12)",
-                  borderRadius: "10px",
-                  padding: "0 5px",
-                  fontSize: "0.72rem",
-                }}
-              >
-                {tournaments.filter((t) => f.key === "all" || t.status === f.key).length}
-              </span>
-            )}
           </button>
         ))}
       </div>
 
       {/* Advanced filters */}
-      <div
-        style={{
-          background: "var(--bg-card)",
-          border: "1px solid var(--border)",
-          borderRadius: "10px",
-          padding: "0.875rem 1.25rem",
-          marginBottom: "1.75rem",
-          display: "flex",
-          gap: "0.75rem",
-          flexWrap: "wrap",
-          alignItems: "center",
-        }}
-      >
-        <span style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>Filtres :</span>
-        {[gameFilters, tierFilters, yearFilters].map((options, i) => (
+      <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl px-5 py-3.5 mb-7 flex gap-3 flex-wrap items-center">
+        <span className="text-[0.82rem] text-[var(--text-muted)]">Filtres :</span>
+        {[
+          { value: gameFilter, onChange: setGameFilter, placeholder: "Tous les jeux", options: (games ?? []).map((g) => ({ value: g.slug, label: g.name })) },
+          { value: tierFilter, onChange: setTierFilter, placeholder: "Tous les tiers", options: TIERS.map((t) => ({ value: t, label: `Tier ${t}` })) },
+          { value: yearFilter, onChange: setYearFilter, placeholder: "Toutes les années", options: YEARS.map((y) => ({ value: y, label: y })) },
+        ].map((sel, idx) => (
           <select
-            key={i}
-            style={{
-              background: "var(--bg-primary)",
-              border: "1px solid var(--border)",
-              borderRadius: "6px",
-              color: "var(--text-secondary)",
-              padding: "0.4rem 0.75rem",
-              fontSize: "0.82rem",
-            }}
+            key={idx}
+            value={sel.value}
+            onChange={(e) => { sel.onChange(e.target.value); setPage(1); }}
+            className="bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg text-[var(--text-secondary)] px-3 py-1.5 text-[0.82rem] outline-none"
           >
-            {options.map((o) => <option key={o}>{o}</option>)}
+            <option value="">{sel.placeholder}</option>
+            {sel.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         ))}
       </div>
 
-      {/* Tournaments grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(310px, 1fr))", gap: "1.25rem" }}>
-        {tournaments.map((t) => (
-          <TournamentCard key={t.slug} tournament={t} />
-        ))}
-      </div>
+      {loading ? (
+        <div className="text-center py-12 text-[var(--text-muted)]">Chargement...</div>
+      ) : !tournaments || tournaments.length === 0 ? (
+        <div className="text-center py-12 text-[var(--text-muted)]">Aucun tournoi trouvé.</div>
+      ) : (
+        <div className="grid gap-5 [grid-template-columns:repeat(auto-fill,minmax(310px,1fr))]">
+          {tournaments.map((t) => <TournamentCard key={t.slug} tournament={toCardData(t)} />)}
+        </div>
+      )}
+
+      {meta && meta.totalPages > 1 && (
+        <div className="flex justify-center gap-2 mt-8">
+          {Array.from({ length: meta.totalPages }, (_, i) => i + 1).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPage(p)}
+              className={`w-9 h-9 rounded-lg border border-[var(--border)] text-sm cursor-pointer ${p === page ? "bg-[var(--accent-green)] text-black font-bold" : "bg-[var(--bg-card)] text-[var(--text-secondary)]"}`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

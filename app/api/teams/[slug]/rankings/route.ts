@@ -12,7 +12,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
 
     const rankings = await db.rankingEntry.findMany({
       where: { teamId: team.id },
-      orderBy: { points: "desc" },
+      orderBy: { totalPoints: "desc" },
       include: {
         season: { select: { name: true, isActive: true } },
         game: { select: { name: true, slug: true } },

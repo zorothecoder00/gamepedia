@@ -31,10 +31,10 @@ export async function POST(request: NextRequest, { params }: Params) {
     const tournament = await db.tournament.findUnique({ where: { slug }, select: { id: true } });
     if (!tournament) return notFound("Tournoi introuvable");
 
-    const body = await request.json() as { playerId?: string; teamId?: string; participantType: string };
+    const body = await request.json() as { playerId?: string; teamId?: string };
 
     const participant = await db.tournamentParticipant.create({
-      data: { tournamentId: tournament.id, ...body, participantType: body.participantType as never },
+      data: { tournamentId: tournament.id, ...body },
     });
 
     return created(participant);

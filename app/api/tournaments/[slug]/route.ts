@@ -11,7 +11,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
       where: { slug },
       include: {
         games: { include: { game: true } },
-        stages: { orderBy: { order: "asc" } },
+        stages: { orderBy: { stageNumber: "asc" } },
         participants: {
           include: {
             player: { select: { pseudo: true, city: true } },

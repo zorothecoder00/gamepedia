@@ -1,58 +1,20 @@
+"use client";
 import Link from "next/link";
 import GameTag from "../../components/GameTag";
+import { useApi } from "@/hooks/useApi";
 
-const articles: Record<string, {
-  title: string; excerpt: string; content: string;
-  tags: string[]; publishedAt: string; authorName: string;
-  readTime: number; category: string;
-  related: { slug: string; title: string; category: string }[];
-}> = {
-  "valorant-cup-lome-2025-recap": {
-    title: "Valorant Cup Lomé 2025 : TGO Esports champion !",
-    excerpt: "La 3ème édition de la Valorant Cup s'est clôturée sur une finale épique entre TGO Esports et Lomé Gaming.",
-    content: `## Résumé du tournoi
+interface Article {
+  id: string; slug: string; title: string; excerpt?: string;
+  content: string; coverUrl?: string; category: string;
+  publishedAt: string; tags?: string[]; readTime?: number;
+  author: { username: string };
+}
 
-La **3ème édition de la Valorant Cup Lomé** s'est tenue du 15 au 20 mars 2025 au Centre de la Jeunesse de Lomé. Huit équipes du pays entier se sont affrontées dans un format élimination directe.
-
-## La finale
-
-La finale opposait **TGO Esports** (tenant du titre, seed #1) à **Lomé Gaming** (outsider révélation).
-
-Après trois cartes disputées, TGO Esports s'impose **3-1** et conserve son titre. Phantom_TG est élu MVP du tournoi avec des statistiques impressionnantes : 34 kills, 87% HS rate sur la carte décisive.
-
-## Distribution des prix
-
-| Position | Équipe | Prize |
-|----------|--------|-------|
-| 🥇 1er | TGO Esports | 150 000 XOF |
-| 🥈 2ème | Lomé Gaming | 90 000 XOF |
-| 🥉 3ème | Northern Force | 30 000 XOF |
-| 4ème | Togo Legends | 30 000 XOF |
-
-## Prochaine étape
-
-TGO Esports se qualifie ainsi pour le **National Championship 2025** prévu en juin, avec un prize pool d'un million de FCFA.`,
-    tags: ["Valorant", "Tournoi", "Lomé", "TGO Esports"],
-    publishedAt: "2025-03-21",
-    authorName: "GamePedia TG",
-    readTime: 4,
-    category: "Résultats",
-    related: [
-      { slug: "national-championship-2025-annonce", title: "National Championship 2025 : 1 million FCFA de prize pool !", category: "Annonce" },
-      { slug: "portrait-phantom-tg", title: "Portrait : Phantom_TG, le capitaine de TGO Esports", category: "Portrait" },
-    ],
-  },
+const CATEGORY_COLORS: Record<string, string> = {
+  Résultats: "var(--accent-green)", Analyse: "var(--accent-blue)",
+  Annonce: "var(--tier-s)", Portrait: "var(--tier-a)", Actualité: "var(--text-muted)",
 };
 
-const categoryColors: Record<string, string> = {
-  Résultats: "var(--accent-green)",
-  Analyse: "var(--accent-blue)",
-  Annonce: "var(--tier-s)",
-  Portrait: "var(--tier-a)",
-  Actualité: "var(--text-muted)",
-};
-
-// Rendu Markdown simplifié (sans librairie externe)
 function MarkdownContent({ content }: { content: string }) {
   const lines = content.split("\n");
   const elements: React.ReactNode[] = [];
@@ -62,264 +24,145 @@ function MarkdownContent({ content }: { content: string }) {
     const line = lines[i];
     if (line.startsWith("## ")) {
       elements.push(
-        <h2 key={i} style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: "1.2rem", margin: "1.5rem 0 0.75rem" }}>
+        <h2 key={i} className="text-[var(--text-primary)] font-bold text-[1.2rem] mt-6 mb-3">
           {line.replace("## ", "")}
-        </h2>
+        </h2>,
       );
     } else if (line.startsWith("| ")) {
-      // Table
       const tableLines: string[] = [];
-      while (i < lines.length && lines[i].startsWith("|")) {
-        tableLines.push(lines[i]);
-        i++;
-      }
+      while (i < lines.length && lines[i].startsWith("|")) { tableLines.push(lines[i]); i++; }
       const [header, , ...rows] = tableLines;
       const headers = header.split("|").filter(Boolean).map((h) => h.trim());
       elements.push(
-        <div key={`table-${i}`} style={{ overflowX: "auto", margin: "1rem 0" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.88rem" }}>
+        <div key={`table-${i}`} className="overflow-x-auto my-4">
+          <table className="w-full border-collapse text-[0.88rem]">
             <thead>
               <tr>
                 {headers.map((h, j) => (
-                  <th key={j} style={{ padding: "0.5rem 0.875rem", textAlign: "left", color: "var(--text-muted)", borderBottom: "1px solid var(--border)", fontWeight: 600 }}>
-                    {h}
-                  </th>
+                  <th key={j} className="px-3.5 py-2 text-left text-[var(--text-muted)] border-b border-[var(--border)] font-semibold">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {rows.map((row, ri) => (
-                <tr key={ri} style={{ borderBottom: "1px solid var(--border)" }}>
+                <tr key={ri} className="border-b border-[var(--border)]">
                   {row.split("|").filter(Boolean).map((cell, ci) => (
-                    <td key={ci} style={{ padding: "0.5rem 0.875rem", color: "var(--text-secondary)" }}>
-                      {cell.trim()}
-                    </td>
+                    <td key={ci} className="px-3.5 py-2 text-[var(--text-secondary)]">{cell.trim()}</td>
                   ))}
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </div>,
       );
       continue;
-    } else if (line.trim() === "") {
-      // skip empty
-    } else {
-      // paragraph with basic bold
+    } else if (line.trim() !== "") {
       const parts = line.split(/\*\*([^*]+)\*\*/g);
       elements.push(
-        <p key={i} style={{ color: "var(--text-secondary)", fontSize: "0.92rem", lineHeight: 1.75, marginBottom: "0.875rem" }}>
+        <p key={i} className="text-[var(--text-secondary)] text-[0.92rem] leading-[1.75] mb-3.5">
           {parts.map((part, j) =>
-            j % 2 === 1 ? (
-              <strong key={j} style={{ color: "var(--text-primary)", fontWeight: 700 }}>{part}</strong>
-            ) : (
-              part
-            )
+            j % 2 === 1 ? <strong key={j} className="text-[var(--text-primary)] font-bold">{part}</strong> : part,
           )}
-        </p>
+        </p>,
       );
     }
     i++;
   }
-
   return <div>{elements}</div>;
 }
 
 export default function ArticlePage({ params }: { params: { slug: string } }) {
-  const article = articles[params.slug] ?? {
-    title: "Article introuvable",
-    excerpt: "",
-    content: "Cet article n'existe pas ou a été supprimé.",
-    tags: [],
-    publishedAt: new Date().toISOString(),
-    authorName: "GamePedia TG",
-    readTime: 1,
-    category: "Actualité",
-    related: [],
-  };
+  const { slug } = params;
+  const { data: article, loading } = useApi<Article>(`/api/articles/${slug}`);
 
-  const catColor = categoryColors[article.category] ?? "var(--text-muted)";
+  if (loading) {
+    return <div className="max-w-[1280px] mx-auto my-16 text-center text-[var(--text-muted)]">Chargement...</div>;
+  }
+  if (!article) {
+    return (
+      <div className="max-w-[1280px] mx-auto my-16 text-center">
+        <p className="text-[var(--text-muted)] mb-4">Article introuvable.</p>
+        <Link href="/news" className="text-[var(--accent-green)] no-underline text-sm hover:underline">← Retour aux actualités</Link>
+      </div>
+    );
+  }
+
+  const catColor = CATEGORY_COLORS[article.category] ?? "var(--text-muted)";
 
   return (
-    <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "2rem 1.5rem" }}>
+    <div className="max-w-[1280px] mx-auto px-6 py-8">
       {/* Breadcrumb */}
-      <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", marginBottom: "1.5rem", fontSize: "0.8rem" }}>
-        <Link href="/news" style={{ color: "var(--text-muted)", textDecoration: "none" }}>Actualités</Link>
-        <span style={{ color: "var(--border-bright)" }}>›</span>
-        <span style={{ color: "var(--text-secondary)" }}>{article.category}</span>
+      <div className="flex gap-1.5 items-center mb-6 text-[0.8rem]">
+        <Link href="/news" className="text-[var(--text-muted)] no-underline hover:text-[var(--text-secondary)]">Actualités</Link>
+        <span className="text-[var(--border-bright)]">›</span>
+        <span className="text-[var(--text-secondary)]">{article.category}</span>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: "2.5rem", alignItems: "start" }}>
-        {/* Article */}
+      <div className="grid [grid-template-columns:1fr_300px] gap-10">
         <article>
-          {/* Category + meta */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem" }}>
+          {/* Meta */}
+          <div className="flex items-center gap-2 mb-4">
             <span
-              style={{
-                background: `${catColor}22`,
-                color: catColor,
-                fontSize: "0.72rem",
-                fontWeight: 700,
-                padding: "2px 8px",
-                borderRadius: "4px",
-              }}
+              className="text-[0.72rem] font-bold px-2 py-0.5 rounded"
+              style={{ background: `${catColor}22`, color: catColor }}
             >
               {article.category}
             </span>
-            <span style={{ color: "var(--text-muted)", fontSize: "0.78rem" }}>
+            <span className="text-[var(--text-muted)] text-[0.78rem]">
               {new Date(article.publishedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
-              {" · "}{article.readTime} min de lecture
+              {article.readTime && ` · ${article.readTime} min de lecture`}
             </span>
           </div>
 
-          {/* Title */}
-          <h1 style={{ color: "var(--text-primary)", fontSize: "1.75rem", fontWeight: 800, lineHeight: 1.3, marginBottom: "1rem" }}>
-            {article.title}
-          </h1>
+          <h1 className="text-[1.75rem] font-black text-[var(--text-primary)] leading-snug mb-4">{article.title}</h1>
 
-          {/* Excerpt */}
-          <p
-            style={{
-              color: "var(--text-secondary)",
-              fontSize: "1rem",
-              lineHeight: 1.65,
-              marginBottom: "1.5rem",
-              paddingLeft: "1rem",
-              borderLeft: "3px solid var(--accent-green)",
-              fontStyle: "italic",
-            }}
-          >
-            {article.excerpt}
-          </p>
+          {article.excerpt && (
+            <p className="text-base text-[var(--text-secondary)] leading-[1.65] mb-6 pl-4 border-l-[3px] border-[var(--accent-green)] italic">
+              {article.excerpt}
+            </p>
+          )}
 
-          {/* Cover placeholder */}
+          {/* Cover */}
           <div
+            className="h-60 rounded-xl mb-8 border border-[var(--border)] flex items-center justify-center text-[4rem]"
             style={{
-              height: "240px",
-              background: "linear-gradient(135deg, rgba(0,230,118,0.12), rgba(79,195,247,0.06))",
-              border: "1px solid var(--border)",
-              borderRadius: "10px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "4rem",
-              marginBottom: "2rem",
+              background: article.coverUrl
+                ? `url(${article.coverUrl}) center/cover`
+                : "linear-gradient(135deg, rgba(0,230,118,0.12), rgba(79,195,247,0.06))",
             }}
           >
-            🏆
+            {!article.coverUrl && "🏆"}
           </div>
 
           {/* Content */}
-          <div
-            style={{
-              background: "var(--bg-card)",
-              border: "1px solid var(--border)",
-              borderRadius: "10px",
-              padding: "2rem",
-            }}
-          >
+          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-8">
             <MarkdownContent content={article.content} />
           </div>
 
           {/* Tags */}
-          <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginTop: "1.5rem" }}>
-            {article.tags.map((tag) => <GameTag key={tag} name={tag} />)}
-          </div>
+          {article.tags && article.tags.length > 0 && (
+            <div className="flex gap-1.5 flex-wrap mt-6">
+              {article.tags.map((tag) => <GameTag key={tag} name={tag} />)}
+            </div>
+          )}
 
           {/* Author */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.875rem",
-              marginTop: "2rem",
-              paddingTop: "1.5rem",
-              borderTop: "1px solid var(--border)",
-            }}
-          >
-            <div
-              style={{
-                width: "44px",
-                height: "44px",
-                borderRadius: "50%",
-                background: "linear-gradient(135deg, var(--accent-green), var(--accent-blue))",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#000",
-                fontWeight: 700,
-                fontSize: "0.9rem",
-              }}
-            >
-              GP
+          <div className="flex items-center gap-3.5 mt-8 pt-6 border-t border-[var(--border)]">
+            <div className="w-11 h-11 rounded-full flex items-center justify-center text-black font-bold text-sm shrink-0 bg-gradient-to-br from-[var(--accent-green)] to-[var(--accent-blue)]">
+              {article.author.username.slice(0, 2).toUpperCase()}
             </div>
             <div>
-              <div style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: "0.9rem" }}>{article.authorName}</div>
-              <div style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>Rédaction GamePedia TG</div>
+              <div className="font-semibold text-sm text-[var(--text-primary)]">{article.author.username}</div>
+              <div className="text-[0.75rem] text-[var(--text-muted)]">Rédaction GamePedia TG</div>
             </div>
           </div>
         </article>
 
         {/* Sidebar */}
-        <aside style={{ position: "sticky", top: "80px" }}>
-          {/* Related */}
-          {article.related.length > 0 && (
-            <div
-              style={{
-                background: "var(--bg-card)",
-                border: "1px solid var(--border)",
-                borderRadius: "10px",
-                padding: "1.25rem",
-                marginBottom: "1.25rem",
-              }}
-            >
-              <h3 style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: "0.9rem", marginBottom: "1rem" }}>
-                Articles liés
-              </h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                {article.related.map((rel) => {
-                  const rc = categoryColors[rel.category] ?? "var(--text-muted)";
-                  return (
-                    <Link key={rel.slug} href={`/news/${rel.slug}`} style={{ textDecoration: "none" }}>
-                      <div
-                        style={{
-                          padding: "0.75rem",
-                          background: "var(--bg-primary)",
-                          border: "1px solid var(--border)",
-                          borderRadius: "7px",
-                          transition: "border-color 0.15s",
-                        }}
-                        onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--border-bright)")}
-                        onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--border)")}
-                      >
-                        <span style={{ background: `${rc}22`, color: rc, fontSize: "0.65rem", fontWeight: 700, padding: "1px 5px", borderRadius: "3px", display: "inline-block", marginBottom: "0.4rem" }}>
-                          {rel.category}
-                        </span>
-                        <div style={{ color: "var(--text-primary)", fontSize: "0.82rem", fontWeight: 500, lineHeight: 1.4 }}>
-                          {rel.title}
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Back to news */}
+        <aside className="sticky top-20">
           <Link
             href="/news"
-            style={{
-              display: "block",
-              textAlign: "center",
-              padding: "0.75rem",
-              border: "1px solid var(--border)",
-              borderRadius: "8px",
-              color: "var(--text-secondary)",
-              textDecoration: "none",
-              fontSize: "0.85rem",
-              background: "var(--bg-card)",
-            }}
+            className="block text-center py-3 border border-[var(--border)] rounded-lg text-[var(--text-secondary)] no-underline text-sm bg-[var(--bg-card)] hover:border-[var(--border-bright)] transition-colors"
           >
             ← Toutes les actualités
           </Link>

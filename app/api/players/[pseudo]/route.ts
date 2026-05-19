@@ -13,7 +13,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
       include: {
         user: { select: { email: true, role: true } },
         gameProfiles: { include: { game: true } },
-        teamMembers: {
+        teamMemberships: {
           where: { leftAt: null },
           include: { team: { select: { id: true, name: true, tag: true, slug: true } } },
         },

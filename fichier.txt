@@ -1,3 +1,5 @@
- ■ Créer les pages /profile et /admin
-  □ Créer les routes API
-  □ Créer les pages d'erreur 404 et erreur générale
+Dans Next.js App Router, tous les composants sont
+  Server Components par défaut. Les event handlers (onMouseEnter, onClick, etc.)
+   et les hooks React (useState, useEffect) ne fonctionnent que côté client — il
+   faut donc déclarer "use client" en première ligne pour les fichiers qui les
+  utilisent.

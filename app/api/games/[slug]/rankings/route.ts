@@ -13,7 +13,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
 
     const entries = await db.rankingEntry.findMany({
       where: { gameId: game.id },
-      orderBy: { points: "desc" },
+      orderBy: { totalPoints: "desc" },
       take: 50,
       include: {
         player: { select: { pseudo: true, city: true, isVerified: true } },

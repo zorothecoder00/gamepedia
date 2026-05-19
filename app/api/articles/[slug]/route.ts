@@ -7,10 +7,7 @@ type Params = { params: Promise<{ slug: string }> };
 export async function GET(_request: NextRequest, { params }: Params) {
   try {
     const { slug } = await params;
-    const article = await db.article.findUnique({
-      where: { slug },
-      include: { author: { select: { username: true } } },
-    });
+    const article = await db.article.findUnique({ where: { slug } });
     if (!article || !article.isPublished) return notFound("Article introuvable");
     return ok(article);
   } catch {

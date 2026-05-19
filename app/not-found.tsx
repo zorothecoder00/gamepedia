@@ -5,8 +5,7 @@ export default function NotFound() {
     <div className="min-h-[70vh] flex flex-col items-center justify-center px-6 text-center">
       {/* Décoration */}
       <div className="relative mb-8">
-        <p className="text-[9rem] font-black leading-none select-none"
-          style={{ color: "transparent", WebkitTextStroke: "2px var(--border-bright)" }}>
+        <p className="text-[9rem] font-black leading-none select-none [color:transparent] [-webkit-text-stroke:2px_var(--border-bright)]">
           404
         </p>
         <div className="absolute inset-0 flex items-center justify-center">

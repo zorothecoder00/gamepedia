@@ -2,114 +2,105 @@
 import { useState } from "react";
 import Link from "next/link";
 import TierBadge from "../../components/TierBadge";
+import { useApi } from "@/hooks/useApi";
 
-// Données de démo — remplacées par des appels API
-const gamesData: Record<string, {
-  name: string; genre: string; format: string; platforms: string[];
-  description: string; logo: string; color: string;
-  publisher: string; playerCount: number; tournamentCount: number;
-}> = {
-  "valorant": {
-    name: "Valorant", genre: "FPS Tactique", format: "5v5",
-    platforms: ["PC"], color: "#ff4655", logo: "🎯",
-    description: "Valorant est un shooter tactique 5v5 développé par Riot Games. La scène compétitive au Togo connaît une croissance rapide depuis 2022.",
-    publisher: "Riot Games", playerCount: 124, tournamentCount: 18,
-  },
-  "free-fire": {
-    name: "Free Fire", genre: "Battle Royale", format: "Battle Royale",
-    platforms: ["Mobile"], color: "#ff9800", logo: "🔥",
-    description: "Free Fire est un battle royale mobile développé par Garena. C'est le jeu esport le plus populaire au Togo.",
-    publisher: "Garena", playerCount: 312, tournamentCount: 34,
-  },
-  "fifa-25": {
-    name: "FIFA 25", genre: "Sport", format: "1v1",
-    platforms: ["PC", "Console"], color: "#4caf50", logo: "⚽",
-    description: "FIFA 25 est le jeu de football virtuel phare d'EA Sports. Les tournois FIFA sont très populaires à Lomé.",
-    publisher: "EA Sports", playerCount: 89, tournamentCount: 12,
-  },
+interface Game {
+  id: string; slug: string; name: string; genre: string; format: string;
+  platforms: string[]; description: string; color: string; logoUrl: string | null;
+  publisher?: string;
+  _count: { playerProfiles: number; tournaments: number };
+}
+
+interface Tournament {
+  id: string; slug: string; name: string;
+  tier: "S" | "A" | "B" | "C";
+  status: "UPCOMING" | "ONGOING" | "COMPLETED" | "CANCELLED";
+  startDate: string; prizePool?: number; currency?: string;
+}
+
+interface RankingEntry {
+  id: string; rank: number; points: number; wins: number;
+  player?: { pseudo: string; city?: string };
+  team?: { name: string; tag: string; slug: string };
+}
+
+interface Player { id: string; pseudo: string; city?: string; isVerified?: boolean }
+
+const TABS = ["Vue d'ensemble", "Classement", "Tournois", "Joueurs"];
+
+const STATUS_COLORS: Record<string, string> = {
+  UPCOMING: "var(--accent-blue)", ONGOING: "var(--accent-green)",
+  COMPLETED: "var(--text-muted)", CANCELLED: "var(--accent-red)",
+};
+const STATUS_LABELS: Record<string, string> = {
+  UPCOMING: "À venir", ONGOING: "En cours", COMPLETED: "Terminé", CANCELLED: "Annulé",
 };
 
-const demoRankings = [
-  { rank: 1, pseudo: "Phantom_TG", city: "Lomé", points: 2850, wins: 4, avatar: null },
-  { rank: 2, pseudo: "ShadowKing", city: "Kara", points: 2400, wins: 3, avatar: null },
-  { rank: 3, pseudo: "NightWolf", city: "Lomé", points: 2100, wins: 2, avatar: null },
-  { rank: 4, pseudo: "BlazeFire", city: "Atakpamé", points: 1900, wins: 2, avatar: null },
-  { rank: 5, pseudo: "RapidStrike", city: "Lomé", points: 1700, wins: 1, avatar: null },
-];
-
-const demoTournaments = [
-  { slug: "valorant-cup-lome-2025", name: "Valorant Cup Lomé 2025", tier: "A" as const, status: "COMPLETED" as const, startDate: "2025-03-15", prizePool: 300000 },
-  { slug: "national-championship-2025", name: "National Championship 2025", tier: "S" as const, status: "UPCOMING" as const, startDate: "2025-06-01", prizePool: 1000000 },
-  { slug: "qualifier-q1-2025", name: "Qualificatif Q1 2025", tier: "C" as const, status: "COMPLETED" as const, startDate: "2025-01-20", prizePool: 0 },
-];
-
-const tabs = ["Vue d'ensemble", "Classement", "Tournois", "Joueurs"];
+function Stat({ label, value, color }: { label: string; value: string | number; color: string }) {
+  return (
+    <div>
+      <div className="font-bold text-base" style={{ color }}>{value}</div>
+      <div className="text-[0.72rem] text-[var(--text-muted)]">{label}</div>
+    </div>
+  );
+}
 
 export default function GamePage({ params }: { params: { slug: string } }) {
   const [activeTab, setActiveTab] = useState(0);
-  const game = gamesData[params.slug] ?? {
-    name: params.slug, genre: "Jeu", format: "?",
-    platforms: [], color: "var(--accent-blue)", logo: "🎮",
-    description: "Aucune description disponible.", publisher: "Inconnu",
-    playerCount: 0, tournamentCount: 0,
-  };
+  const { slug } = params;
+
+  const { data: game, loading: loadingGame } = useApi<Game>(`/api/games/${slug}`);
+  const { data: tournaments, loading: loadingTournaments } = useApi<Tournament[]>(`/api/games/${slug}/tournaments`);
+  const { data: rankings, loading: loadingRankings } = useApi<RankingEntry[]>(
+    activeTab === 1 ? `/api/rankings/${slug}` : null, [activeTab],
+  );
+  const { data: players, loading: loadingPlayers } = useApi<Player[]>(
+    activeTab === 3 ? `/api/games/${slug}/players` : null, [activeTab],
+  );
+
+  const color = game?.color ?? "var(--accent-blue)";
+
+  if (loadingGame) {
+    return <div className="max-w-[1280px] mx-auto my-16 text-center text-[var(--text-muted)]">Chargement...</div>;
+  }
+  if (!game) {
+    return <div className="max-w-[1280px] mx-auto my-16 text-center text-[var(--text-muted)]">Jeu introuvable.</div>;
+  }
+
+  const completedTournaments = (tournaments ?? []).filter((t) => t.status === "COMPLETED");
+  const upcomingTournaments = (tournaments ?? []).filter((t) => t.status === "UPCOMING" || t.status === "ONGOING");
 
   return (
     <div>
       {/* Banner / Header */}
       <div
-        style={{
-          background: `linear-gradient(180deg, ${game.color}25 0%, var(--bg-primary) 100%)`,
-          borderBottom: "1px solid var(--border)",
-          padding: "2.5rem 1.5rem 1.5rem",
-        }}
+        className="border-b border-[var(--border)] px-6 pt-10 pb-6"
+        style={{ background: `linear-gradient(180deg, ${color}25 0%, var(--bg-primary) 100%)` }}
       >
-        <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
-          <div style={{ display: "flex", alignItems: "flex-end", gap: "1.5rem", flexWrap: "wrap" }}>
-            {/* Logo */}
+        <div className="max-w-[1280px] mx-auto">
+          <div className="flex items-end gap-6 flex-wrap">
             <div
-              style={{
-                width: "80px",
-                height: "80px",
-                borderRadius: "16px",
-                background: `${game.color}22`,
-                border: `2px solid ${game.color}55`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "2.5rem",
-                flexShrink: 0,
-              }}
+              className="w-20 h-20 rounded-2xl flex items-center justify-center text-[2.5rem] shrink-0"
+              style={{ background: `${color}22`, border: `2px solid ${color}55` }}
             >
-              {game.logo}
+              {game.logoUrl ? <img src={game.logoUrl} alt={game.name} className="w-14 h-14 object-contain" /> : "🎮"}
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", marginBottom: "0.25rem" }}>
-                <h1 style={{ color: "var(--text-primary)", fontSize: "1.75rem", fontWeight: 800 }}>
-                  {game.name}
-                </h1>
+            <div className="flex-1">
+              <div className="flex items-center gap-3 flex-wrap mb-1">
+                <h1 className="text-[1.75rem] font-black text-[var(--text-primary)]">{game.name}</h1>
                 <span
-                  style={{
-                    background: `${game.color}22`,
-                    color: game.color,
-                    border: `1px solid ${game.color}44`,
-                    borderRadius: "5px",
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                    padding: "2px 8px",
-                  }}
+                  className="text-[0.75rem] font-semibold px-2 py-0.5 rounded"
+                  style={{ background: `${color}22`, color, border: `1px solid ${color}44` }}
                 >
                   {game.genre}
                 </span>
               </div>
-              <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginBottom: "0.75rem" }}>
-                {game.description}
-              </p>
-              <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
-                <Stat label="Joueurs" value={game.playerCount} color={game.color} />
-                <Stat label="Tournois" value={game.tournamentCount} color="var(--accent-gold)" />
+              <p className="text-[0.9rem] text-[var(--text-secondary)] mb-3">{game.description}</p>
+              <div className="flex gap-6 flex-wrap">
+                <Stat label="Joueurs" value={game._count.playerProfiles} color={color} />
+                <Stat label="Tournois" value={game._count.tournaments} color="var(--accent-gold)" />
                 <Stat label="Format" value={game.format} color="var(--text-secondary)" />
-                <Stat label="Éditeur" value={game.publisher} color="var(--text-secondary)" />
+                {game.publisher && <Stat label="Éditeur" value={game.publisher} color="var(--text-secondary)" />}
               </div>
             </div>
           </div>
@@ -117,22 +108,17 @@ export default function GamePage({ params }: { params: { slug: string } }) {
       </div>
 
       {/* Tabs */}
-      <div style={{ borderBottom: "1px solid var(--border)", background: "var(--bg-secondary)" }}>
-        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 1.5rem", display: "flex", gap: "0" }}>
-          {tabs.map((tab, i) => (
+      <div className="bg-[var(--bg-secondary)] border-b border-[var(--border)]">
+        <div className="max-w-[1280px] mx-auto px-6 flex">
+          {TABS.map((tab, i) => (
             <button
               key={tab}
               onClick={() => setActiveTab(i)}
+              className="px-5 py-3.5 bg-transparent border-none text-sm cursor-pointer transition-colors"
               style={{
-                padding: "0.875rem 1.25rem",
-                background: "none",
-                border: "none",
-                borderBottom: activeTab === i ? `2px solid ${game.color}` : "2px solid transparent",
-                color: activeTab === i ? game.color : "var(--text-secondary)",
+                borderBottom: activeTab === i ? `2px solid ${color}` : "2px solid transparent",
+                color: activeTab === i ? color : "var(--text-secondary)",
                 fontWeight: activeTab === i ? 600 : 400,
-                fontSize: "0.88rem",
-                cursor: "pointer",
-                transition: "color 0.15s",
               }}
             >
               {tab}
@@ -141,302 +127,163 @@ export default function GamePage({ params }: { params: { slug: string } }) {
         </div>
       </div>
 
-      {/* Tab content */}
-      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "2rem 1.5rem" }}>
-        {activeTab === 0 && <OverviewTab game={game} />}
-        {activeTab === 1 && <RankingTab color={game.color} />}
-        {activeTab === 2 && <TournamentsTab />}
-        {activeTab === 3 && <PlayersTab color={game.color} />}
-      </div>
-    </div>
-  );
-}
+      {/* Content */}
+      <div className="max-w-[1280px] mx-auto px-6 py-8">
 
-function Stat({ label, value, color }: { label: string; value: string | number; color: string }) {
-  return (
-    <div>
-      <div style={{ color, fontWeight: 700, fontSize: "1rem" }}>{value}</div>
-      <div style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>{label}</div>
-    </div>
-  );
-}
-
-function OverviewTab({ game }: { game: { name: string; color: string } }) {
-  return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem" }}>
-      <div>
-        <h2 style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: "1.1rem", marginBottom: "1rem" }}>
-          Derniers résultats
-        </h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-          {demoTournaments.filter(t => t.status === "COMPLETED").map(t => (
-            <div
-              key={t.slug}
-              style={{
-                background: "var(--bg-card)",
-                border: "1px solid var(--border)",
-                borderRadius: "8px",
-                padding: "0.875rem 1rem",
-              }}
-            >
-              <div style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: "0.88rem" }}>{t.name}</div>
-              <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", marginTop: "0.25rem" }}>
-                {new Date(t.startDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
-              </div>
-              <div style={{ marginTop: "0.4rem" }}>
-                <TierBadge tier={t.tier} small />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <h2 style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: "1.1rem", marginBottom: "1rem" }}>
-          Tournois à venir
-        </h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-          {demoTournaments.filter(t => t.status === "UPCOMING").map(t => (
-            <div
-              key={t.slug}
-              style={{
-                background: "var(--bg-card)",
-                border: `1px solid ${game.color}44`,
-                borderRadius: "8px",
-                padding: "0.875rem 1rem",
-              }}
-            >
-              <div style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: "0.88rem" }}>{t.name}</div>
-              <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", marginTop: "0.25rem" }}>
-                Début : {new Date(t.startDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "0.4rem" }}>
-                <TierBadge tier={t.tier} small />
-                {t.prizePool > 0 && (
-                  <span style={{ color: "var(--accent-gold)", fontSize: "0.78rem", fontWeight: 600 }}>
-                    {t.prizePool.toLocaleString()} XOF
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function RankingTab({ color }: { color: string }) {
-  return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem" }}>
-        <h2 style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: "1.1rem" }}>
-          Classement — Saison 1 2025
-        </h2>
-        <select
-          style={{
-            background: "var(--bg-card)",
-            border: "1px solid var(--border)",
-            borderRadius: "6px",
-            color: "var(--text-secondary)",
-            padding: "0.35rem 0.75rem",
-            fontSize: "0.82rem",
-          }}
-        >
-          <option>Saison 1 - 2025</option>
-        </select>
-      </div>
-
-      <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "10px", overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ borderBottom: "1px solid var(--border)", background: "var(--bg-secondary)" }}>
-              {["Rang", "Joueur", "Ville", "Points", "Wins"].map((h) => (
-                <th
-                  key={h}
-                  style={{
-                    padding: "0.75rem 1rem",
-                    textAlign: "left",
-                    color: "var(--text-muted)",
-                    fontSize: "0.78rem",
-                    fontWeight: 600,
-                    letterSpacing: "0.5px",
-                  }}
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {demoRankings.map((entry, i) => (
-              <tr
-                key={entry.rank}
-                style={{
-                  borderBottom: i < demoRankings.length - 1 ? "1px solid var(--border)" : "none",
-                }}
-              >
-                <td style={{ padding: "0.875rem 1rem" }}>
-                  <RankDisplay rank={entry.rank} color={color} />
-                </td>
-                <td style={{ padding: "0.875rem 1rem" }}>
-                  <Link href={`/players/${entry.pseudo}`} style={{ color: "var(--text-primary)", textDecoration: "none", fontWeight: 600, fontSize: "0.9rem" }}>
-                    {entry.pseudo}
-                  </Link>
-                </td>
-                <td style={{ padding: "0.875rem 1rem", color: "var(--text-muted)", fontSize: "0.85rem" }}>
-                  {entry.city}
-                </td>
-                <td style={{ padding: "0.875rem 1rem", color: "var(--accent-gold)", fontWeight: 700, fontSize: "0.9rem" }}>
-                  {entry.points.toLocaleString()}
-                </td>
-                <td style={{ padding: "0.875rem 1rem", color: "var(--text-secondary)", fontSize: "0.85rem" }}>
-                  {entry.wins}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function RankDisplay({ rank, color }: { rank: number; color: string }) {
-  if (rank === 1) return <span style={{ color: "var(--accent-gold)", fontWeight: 800 }}>🥇 1</span>;
-  if (rank === 2) return <span style={{ color: "#b0b0c0", fontWeight: 800 }}>🥈 2</span>;
-  if (rank === 3) return <span style={{ color: "#cd7f32", fontWeight: 800 }}>🥉 3</span>;
-  return <span style={{ color, fontWeight: 600 }}>#{rank}</span>;
-}
-
-function TournamentsTab() {
-  const statusFilters = ["Tous", "À venir", "En cours", "Terminé"];
-  const statusColors = {
-    UPCOMING: "var(--accent-blue)",
-    ONGOING: "var(--accent-green)",
-    COMPLETED: "var(--text-muted)",
-    CANCELLED: "var(--accent-red)",
-  };
-  const statusLabels = { UPCOMING: "À venir", ONGOING: "En cours", COMPLETED: "Terminé", CANCELLED: "Annulé" };
-
-  return (
-    <div>
-      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
-        {statusFilters.map((f) => (
-          <button
-            key={f}
-            style={{
-              padding: "0.35rem 0.875rem",
-              borderRadius: "6px",
-              border: "1px solid var(--border)",
-              background: f === "Tous" ? "var(--accent-blue)" : "var(--bg-card)",
-              color: f === "Tous" ? "#000" : "var(--text-secondary)",
-              fontSize: "0.82rem",
-              cursor: "pointer",
-            }}
-          >
-            {f}
-          </button>
-        ))}
-      </div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-        {demoTournaments.map((t) => (
-          <Link key={t.slug} href={`/tournaments/${t.slug}`} style={{ textDecoration: "none" }}>
-            <div
-              style={{
-                background: "var(--bg-card)",
-                border: "1px solid var(--border)",
-                borderRadius: "8px",
-                padding: "1rem 1.25rem",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "1rem",
-                flexWrap: "wrap",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                <span style={{ fontSize: "1.5rem" }}>🏆</span>
-                <div>
-                  <div style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: "0.9rem" }}>{t.name}</div>
-                  <div style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>
-                    {new Date(t.startDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+        {/* Vue d'ensemble */}
+        {activeTab === 0 && (
+          <div className="grid grid-cols-2 gap-8">
+            {[
+              { title: "Derniers résultats", items: completedTournaments.slice(0, 5), upcoming: false },
+              { title: "Tournois à venir", items: upcomingTournaments.slice(0, 5), upcoming: true },
+            ].map(({ title, items, upcoming }) => (
+              <div key={title}>
+                <h2 className="font-bold text-[1.1rem] text-[var(--text-primary)] mb-4">{title}</h2>
+                {loadingTournaments ? (
+                  <p className="text-sm text-[var(--text-muted)]">Chargement...</p>
+                ) : items.length === 0 ? (
+                  <p className="text-sm text-[var(--text-muted)]">{upcoming ? "Aucun tournoi à venir." : "Aucun résultat."}</p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {items.map((t) => (
+                      <Link key={t.slug} href={`/tournaments/${t.slug}`} className="no-underline">
+                        <div
+                          className="bg-[var(--bg-card)] rounded-lg px-4 py-3.5"
+                          style={{ border: upcoming ? `1px solid ${color}44` : "1px solid var(--border)" }}
+                        >
+                          <div className="font-semibold text-sm text-[var(--text-primary)]">{t.name}</div>
+                          <div className="text-[0.75rem] text-[var(--text-muted)] mt-1">
+                            {upcoming ? "Début : " : ""}{new Date(t.startDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+                          </div>
+                          <div className="flex items-center justify-between mt-1.5">
+                            <TierBadge tier={t.tier} small />
+                            {upcoming && t.prizePool && t.prizePool > 0 && (
+                              <span className="text-[0.78rem] font-semibold text-[var(--accent-gold)]">
+                                {t.prizePool.toLocaleString()} {t.currency ?? "XOF"}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
                   </div>
-                </div>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                <TierBadge tier={t.tier} small />
-                <span
-                  style={{
-                    color: statusColors[t.status],
-                    fontSize: "0.78rem",
-                    fontWeight: 600,
-                  }}
-                >
-                  {statusLabels[t.status]}
-                </span>
-                {t.prizePool > 0 && (
-                  <span style={{ color: "var(--accent-gold)", fontSize: "0.82rem", fontWeight: 700 }}>
-                    {t.prizePool.toLocaleString()} XOF
-                  </span>
                 )}
               </div>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}
+            ))}
+          </div>
+        )}
 
-function PlayersTab({ color }: { color: string }) {
-  return (
-    <div>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-          gap: "0.75rem",
-        }}
-      >
-        {demoRankings.map((p) => (
-          <Link key={p.pseudo} href={`/players/${p.pseudo}`} style={{ textDecoration: "none" }}>
-            <div
-              style={{
-                background: "var(--bg-card)",
-                border: "1px solid var(--border)",
-                borderRadius: "8px",
-                padding: "1rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.75rem",
-              }}
-            >
-              <div
-                style={{
-                  width: "40px",
-                  height: "40px",
-                  borderRadius: "50%",
-                  background: `linear-gradient(135deg, ${color}, var(--accent-blue))`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#fff",
-                  fontWeight: 700,
-                  fontSize: "0.85rem",
-                  flexShrink: 0,
-                }}
-              >
-                {p.pseudo.slice(0, 2).toUpperCase()}
+        {/* Classement */}
+        {activeTab === 1 && (
+          <div>
+            <h2 className="font-bold text-[1.1rem] text-[var(--text-primary)] mb-5">Classement — Saison active</h2>
+            {loadingRankings ? (
+              <p className="text-[var(--text-muted)]">Chargement...</p>
+            ) : !rankings || rankings.length === 0 ? (
+              <p className="text-[var(--text-muted)]">Aucun classement disponible.</p>
+            ) : (
+              <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl overflow-hidden">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b border-[var(--border)] bg-[var(--bg-secondary)]">
+                      {["Rang", "Joueur / Équipe", "Points", "Wins"].map((h) => (
+                        <th key={h} className="px-4 py-3 text-left text-[0.78rem] font-semibold text-[var(--text-muted)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rankings.map((entry, i) => {
+                      const name = entry.player?.pseudo ?? entry.team?.name ?? "—";
+                      const city = entry.player?.city ?? "";
+                      const href = entry.player ? `/players/${entry.player.pseudo}` : `/teams/${entry.team?.slug}`;
+                      return (
+                        <tr key={entry.id} className={i < rankings.length - 1 ? "border-b border-[var(--border)]" : ""}>
+                          <td className="px-4 py-3.5 text-sm">
+                            {entry.rank === 1 ? "🥇 1" : entry.rank === 2 ? "🥈 2" : entry.rank === 3 ? "🥉 3" : (
+                              <span className="font-semibold" style={{ color }}>#{entry.rank}</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3.5">
+                            <Link href={href} className="no-underline font-semibold text-[0.9rem] text-[var(--text-primary)] hover:underline">{name}</Link>
+                            {city && <div className="text-[0.75rem] text-[var(--text-muted)]">{city}</div>}
+                          </td>
+                          <td className="px-4 py-3.5 font-bold text-[var(--accent-gold)]">{entry.points.toLocaleString()}</td>
+                          <td className="px-4 py-3.5 text-sm text-[var(--text-secondary)]">{entry.wins}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-              <div>
-                <div style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: "0.88rem" }}>{p.pseudo}</div>
-                <div style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>{p.city}</div>
+            )}
+          </div>
+        )}
+
+        {/* Tournois */}
+        {activeTab === 2 && (
+          <div>
+            {loadingTournaments ? (
+              <p className="text-[var(--text-muted)]">Chargement...</p>
+            ) : !tournaments || tournaments.length === 0 ? (
+              <p className="text-[var(--text-muted)]">Aucun tournoi.</p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {tournaments.map((t) => (
+                  <Link key={t.slug} href={`/tournaments/${t.slug}`} className="no-underline">
+                    <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg px-5 py-4 flex items-center justify-between gap-4 flex-wrap hover:border-[var(--border-bright)] transition-colors">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">🏆</span>
+                        <div>
+                          <div className="font-semibold text-[0.9rem] text-[var(--text-primary)]">{t.name}</div>
+                          <div className="text-[0.75rem] text-[var(--text-muted)]">
+                            {new Date(t.startDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <TierBadge tier={t.tier} small />
+                        <span className="text-[0.78rem] font-semibold" style={{ color: STATUS_COLORS[t.status] }}>{STATUS_LABELS[t.status]}</span>
+                        {t.prizePool && t.prizePool > 0 && (
+                          <span className="text-[0.82rem] font-bold text-[var(--accent-gold)]">{t.prizePool.toLocaleString()} XOF</span>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                ))}
               </div>
-            </div>
-          </Link>
-        ))}
+            )}
+          </div>
+        )}
+
+        {/* Joueurs */}
+        {activeTab === 3 && (
+          <div>
+            {loadingPlayers ? (
+              <p className="text-[var(--text-muted)]">Chargement...</p>
+            ) : !players || players.length === 0 ? (
+              <p className="text-[var(--text-muted)]">Aucun joueur inscrit.</p>
+            ) : (
+              <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]">
+                {players.map((p) => (
+                  <Link key={p.pseudo} href={`/players/${p.pseudo}`} className="no-underline">
+                    <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-4 flex items-center gap-3 hover:border-[var(--border-bright)] transition-colors">
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 text-white"
+                        style={{ background: `linear-gradient(135deg, ${color}, var(--accent-blue))` }}
+                      >
+                        {p.pseudo.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-sm text-[var(--text-primary)]">{p.pseudo}</div>
+                        {p.city && <div className="text-[0.75rem] text-[var(--text-muted)]">{p.city}</div>}
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

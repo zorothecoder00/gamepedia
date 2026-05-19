@@ -195,32 +195,18 @@ function Navbar() {
   ];
 
   return (
-    <header
-      style={{ borderBottom: "1px solid var(--border)" }}
-      className="fixed top-0 left-0 right-0 z-50"
-    >
-      <div
-        style={{ background: "rgba(9,9,15,0.92)" }}
-        className="absolute inset-0 backdrop-blur-md"
-      />
+    <header className="fixed top-0 left-0 right-0 z-50 border-b border-[var(--border)]">
+      <div className="absolute inset-0 backdrop-blur-md bg-[rgba(9,9,15,0.92)]" />
       <div className="relative max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <span
-            style={{ background: "linear-gradient(135deg,#00e676,#4fc3f7)" }}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-[#09090f] font-black text-sm flex-shrink-0"
-          >
+          <span className="w-8 h-8 rounded-lg flex items-center justify-center text-[#09090f] font-black text-sm flex-shrink-0 bg-gradient-to-br from-[#00e676] to-[#4fc3f7]">
             GP
           </span>
           <span className="font-bold text-lg tracking-tight">
-            <span style={{ color: "#00e676" }}>Game</span>
-            <span style={{ color: "#f0f0f8" }}>Pedia</span>
-            <span
-              style={{ color: "#ffd700" }}
-              className="ml-1 text-xs font-semibold"
-            >
-              TG
-            </span>
+            <span className="text-[#00e676]">Game</span>
+            <span className="text-[#f0f0f8]">Pedia</span>
+            <span className="ml-1 text-xs font-semibold text-[#ffd700]">TG</span>
           </span>
         </Link>
 
@@ -230,8 +216,7 @@ function Navbar() {
             <Link
               key={l.href}
               href={l.href}
-              style={{ color: "var(--text-secondary)" }}
-              className="px-3 py-2 rounded-md text-sm font-medium hover:text-white hover:bg-white/5 transition-all duration-150"
+              className="px-3 py-2 rounded-md text-sm font-medium text-[var(--text-secondary)] hover:text-white hover:bg-white/5 transition-all duration-150"
             >
               {l.label}
             </Link>
@@ -242,15 +227,13 @@ function Navbar() {
         <div className="flex items-center gap-3">
           <Link
             href="/auth/login"
-            style={{ color: "var(--text-secondary)" }}
-            className="hidden sm:block text-sm font-medium hover:text-white transition-colors"
+            className="hidden sm:block text-sm font-medium text-[var(--text-secondary)] hover:text-white transition-colors"
           >
             Connexion
           </Link>
           <Link
             href="/auth/register"
-            style={{ background: "var(--accent-green)", color: "#09090f" }}
-            className="px-4 py-2 rounded-lg text-sm font-bold hover:opacity-90 transition-opacity"
+            className="px-4 py-2 rounded-lg text-sm font-bold bg-[var(--accent-green)] text-[#09090f] hover:opacity-90 transition-opacity"
           >
             S&apos;inscrire
           </Link>
@@ -262,72 +245,36 @@ function Navbar() {
 
 function HeroSection() {
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden">
-      {/* Arrière-plan */}
-      <div className="absolute inset-0" style={{ background: "var(--bg-primary)" }}>
-        {/* Grille subtile */}
-        <div
-          className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(0,230,118,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(0,230,118,0.07) 1px, transparent 1px)",
-            backgroundSize: "60px 60px",
-          }}
-        />
-        {/* Halos de lumière */}
-        <div
-          className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl opacity-10 pointer-events-none"
-          style={{ background: "#00e676" }}
-        />
-        <div
-          className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full blur-3xl opacity-8 pointer-events-none"
-          style={{ background: "#4fc3f7" }}
-        />
-        <div
-          className="absolute top-1/2 right-1/3 w-64 h-64 rounded-full blur-3xl opacity-5 pointer-events-none"
-          style={{ background: "#ffd700" }}
-        />
-      </div>
+    <section className="relative min-h-screen flex items-center overflow-hidden bg-[var(--bg-primary)]">
+      {/* Grille subtile */}
+      <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(0,230,118,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(0,230,118,0.07)_1px,transparent_1px)] [background-size:60px_60px]" />
+      {/* Halos de lumière */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl opacity-10 pointer-events-none bg-[#00e676]" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full blur-3xl opacity-[0.08] pointer-events-none bg-[#4fc3f7]" />
+      <div className="absolute top-1/2 right-1/3 w-64 h-64 rounded-full blur-3xl opacity-5 pointer-events-none bg-[#ffd700]" />
 
       {/* Contenu principal */}
       <div className="relative z-10 max-w-7xl mx-auto px-6 pt-28 pb-16 w-full">
         <div className="max-w-3xl">
           {/* Badge Togo */}
-          <div
-            className="inline-flex items-center gap-2 mb-6 px-3 py-1.5 rounded-full text-xs font-semibold"
-            style={{
-              background: "rgba(0,230,118,0.1)",
-              border: "1px solid rgba(0,230,118,0.3)",
-              color: "#00e676",
-            }}
-          >
+          <div className="inline-flex items-center gap-2 mb-6 px-3 py-1.5 rounded-full text-xs font-semibold bg-[rgba(0,230,118,0.1)] border border-[rgba(0,230,118,0.3)] text-[#00e676]">
             <span className="w-2 h-2 rounded-full bg-[#00e676] animate-pulse" />
             🇹🇬 La plateforme esport du Togo
           </div>
 
           {/* Titre principal */}
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-none tracking-tight mb-6">
-            <span style={{ color: "#f0f0f8" }}>L&apos;esport</span>
+            <span className="text-[#f0f0f8]">L&apos;esport</span>
             <br />
-            <span
-              style={{
-                background: "linear-gradient(135deg, #00e676 0%, #4fc3f7 50%, #ffd700 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}
-            >
+            <span className="bg-[linear-gradient(135deg,#00e676_0%,#4fc3f7_50%,#ffd700_100%)] bg-clip-text text-transparent">
               togolais
             </span>
             <br />
-            <span style={{ color: "#f0f0f8" }}>centralisé.</span>
+            <span className="text-[#f0f0f8]">centralisé.</span>
           </h1>
 
           {/* Description */}
-          <p
-            className="text-lg sm:text-xl mb-10 max-w-xl leading-relaxed"
-            style={{ color: "var(--text-secondary)" }}
-          >
+          <p className="text-lg sm:text-xl mb-10 max-w-xl leading-relaxed text-[var(--text-secondary)]">
             Suivez les tournois, retracez les performances des joueurs et découvrez
             les classements officiels de la scène compétitive togolaise.
           </p>
@@ -336,20 +283,14 @@ function HeroSection() {
           <div className="flex flex-wrap gap-4">
             <Link
               href="/tournaments"
-              style={{ background: "var(--accent-green)", color: "#09090f" }}
-              className="flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold text-base hover:opacity-90 transition-opacity shadow-lg"
+              className="flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold text-base hover:opacity-90 transition-opacity shadow-lg bg-[var(--accent-green)] text-[#09090f]"
             >
               <IconTrophy size={18} />
               Voir les tournois
             </Link>
             <Link
               href="/rankings"
-              className="flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold text-base transition-all duration-150"
-              style={{
-                border: "1px solid var(--border-bright)",
-                color: "var(--text-primary)",
-                background: "var(--bg-card)",
-              }}
+              className="flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold text-base transition-all duration-150 border border-[var(--border-bright)] text-[var(--text-primary)] bg-[var(--bg-card)]"
             >
               Classements
               <IconArrow size={16} />
@@ -362,58 +303,33 @@ function HeroSection() {
           {STATS.map((s) => (
             <div
               key={s.label}
-              className="rounded-xl p-4 text-center"
-              style={{
-                background: "var(--bg-card)",
-                border: "1px solid var(--border)",
-              }}
+              className="rounded-xl p-4 text-center bg-[var(--bg-card)] border border-[var(--border)]"
             >
-              <div
-                className="text-2xl sm:text-3xl font-black mb-1"
-                style={{ color: "var(--accent-green)" }}
-              >
+              <div className="text-2xl sm:text-3xl font-black mb-1 text-[var(--accent-green)]">
                 {s.value}
               </div>
-              <div className="text-xs sm:text-sm" style={{ color: "var(--text-secondary)" }}>
-                {s.label}
-              </div>
+              <div className="text-xs sm:text-sm text-[var(--text-secondary)]">{s.label}</div>
             </div>
           ))}
         </div>
       </div>
 
       {/* Fondu vers la section suivante */}
-      <div
-        className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
-        style={{
-          background: "linear-gradient(to bottom, transparent, var(--bg-secondary))",
-        }}
-      />
+      <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none bg-[linear-gradient(to_bottom,transparent,var(--bg-secondary))]" />
     </section>
   );
 }
 
 function GamesSection() {
   return (
-    <section className="py-20" style={{ background: "var(--bg-secondary)" }}>
+    <section className="py-20 bg-[var(--bg-secondary)]">
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex items-center justify-between mb-10">
           <div>
-            <h2
-              className="text-2xl sm:text-3xl font-black"
-              style={{ color: "var(--text-primary)" }}
-            >
-              Jeux actifs
-            </h2>
-            <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>
-              Les jeux compétitifs de la scène togolaise
-            </p>
+            <h2 className="text-2xl sm:text-3xl font-black text-[var(--text-primary)]">Jeux actifs</h2>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">Les jeux compétitifs de la scène togolaise</p>
           </div>
-          <Link
-            href="/games"
-            className="flex items-center gap-1 text-sm font-semibold hover:opacity-80 transition-opacity"
-            style={{ color: "var(--accent-green)" }}
-          >
+          <Link href="/games" className="flex items-center gap-1 text-sm font-semibold hover:opacity-80 transition-opacity text-[var(--accent-green)]">
             Tous les jeux <IconArrow size={14} />
           </Link>
         </div>
@@ -423,11 +339,7 @@ function GamesSection() {
             <Link
               key={g.slug}
               href={`/games/${g.slug}`}
-              className="group relative rounded-2xl p-5 overflow-hidden transition-all duration-200 hover:-translate-y-1"
-              style={{
-                background: "var(--bg-card)",
-                border: "1px solid var(--border)",
-              }}
+              className="group relative rounded-2xl p-5 overflow-hidden transition-all duration-200 hover:-translate-y-1 bg-[var(--bg-card)] border border-[var(--border)]"
             >
               {/* Halo de couleur */}
               <div
@@ -437,20 +349,10 @@ function GamesSection() {
               <div className="relative z-10">
                 <span className="text-4xl">{g.icon}</span>
                 <div className="mt-3">
-                  <h3
-                    className="font-bold text-sm"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    {g.name}
-                  </h3>
-                  <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>
-                    {g.genre}
-                  </p>
+                  <h3 className="font-bold text-sm text-[var(--text-primary)]">{g.name}</h3>
+                  <p className="text-xs mt-0.5 text-[var(--text-secondary)]">{g.genre}</p>
                 </div>
-                <div
-                  className="mt-3 flex items-center gap-1 text-xs font-semibold"
-                  style={{ color: g.color }}
-                >
+                <div className="mt-3 flex items-center gap-1 text-xs font-semibold" style={{ color: g.color }}>
                   <IconUsers size={12} />
                   {g.players} joueurs
                 </div>
@@ -465,25 +367,14 @@ function GamesSection() {
 
 function TournamentsSection() {
   return (
-    <section className="py-20" style={{ background: "var(--bg-primary)" }}>
+    <section className="py-20 bg-[var(--bg-primary)]">
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex items-center justify-between mb-10">
           <div>
-            <h2
-              className="text-2xl sm:text-3xl font-black"
-              style={{ color: "var(--text-primary)" }}
-            >
-              Tournois
-            </h2>
-            <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>
-              En cours et à venir
-            </p>
+            <h2 className="text-2xl sm:text-3xl font-black text-[var(--text-primary)]">Tournois</h2>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">En cours et à venir</p>
           </div>
-          <Link
-            href="/tournaments"
-            className="flex items-center gap-1 text-sm font-semibold hover:opacity-80 transition-opacity"
-            style={{ color: "var(--accent-green)" }}
-          >
+          <Link href="/tournaments" className="flex items-center gap-1 text-sm font-semibold hover:opacity-80 transition-opacity text-[var(--accent-green)]">
             Voir tout <IconArrow size={14} />
           </Link>
         </div>
@@ -495,11 +386,7 @@ function TournamentsSection() {
               <Link
                 key={t.id}
                 href={`/tournaments/${t.slug}`}
-                className="group rounded-2xl overflow-hidden transition-all duration-200 hover:-translate-y-1 flex flex-col"
-                style={{
-                  background: "var(--bg-card)",
-                  border: "1px solid var(--border)",
-                }}
+                className="group rounded-2xl overflow-hidden transition-all duration-200 hover:-translate-y-1 flex flex-col bg-[var(--bg-card)] border border-[var(--border)]"
               >
                 {/* Bandeau de couleur du jeu */}
                 <div className="h-1.5 w-full" style={{ background: t.gameColor }} />
@@ -507,9 +394,7 @@ function TournamentsSection() {
                 <div className="p-5 flex flex-col flex-1">
                   {/* Badges tier + statut */}
                   <div className="flex items-center justify-between mb-3">
-                    <span
-                      className={`text-xs font-bold px-2 py-0.5 rounded ${TIER_STYLES[t.tier]}`}
-                    >
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded ${TIER_STYLES[t.tier]}`}>
                       Tier {t.tier}
                     </span>
                     <span className={`flex items-center gap-1.5 text-xs font-semibold ${st.text}`}>
@@ -519,60 +404,30 @@ function TournamentsSection() {
                   </div>
 
                   {/* Nom du tournoi */}
-                  <h3
-                    className="font-bold text-base leading-tight mb-1"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    {t.name}
-                  </h3>
-                  <p className="text-xs mb-4" style={{ color: t.gameColor }}>
-                    {t.game}
-                  </p>
+                  <h3 className="font-bold text-base leading-tight mb-1 text-[var(--text-primary)]">{t.name}</h3>
+                  <p className="text-xs mb-4" style={{ color: t.gameColor }}>{t.game}</p>
 
                   {/* Métadonnées */}
                   <div className="space-y-1.5 mt-auto">
-                    <div
-                      className="flex items-center gap-2 text-xs"
-                      style={{ color: "var(--text-secondary)" }}
-                    >
+                    <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
                       <IconCalendar />
                       {t.startDate} → {t.endDate}
                     </div>
-                    <div
-                      className="flex items-center gap-2 text-xs"
-                      style={{ color: "var(--text-secondary)" }}
-                    >
+                    <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
                       <IconLocation />
                       {t.location}
                     </div>
                   </div>
 
                   {/* Footer de la carte */}
-                  <div
-                    className="mt-4 pt-4 flex items-center justify-between"
-                    style={{ borderTop: "1px solid var(--border)" }}
-                  >
+                  <div className="mt-4 pt-4 flex items-center justify-between border-t border-[var(--border)]">
                     <div>
-                      <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-                        Prize pool
-                      </div>
-                      <div
-                        className="font-bold text-sm"
-                        style={{ color: "var(--accent-gold)" }}
-                      >
-                        {t.prizePool}
-                      </div>
+                      <div className="text-xs text-[var(--text-muted)]">Prize pool</div>
+                      <div className="font-bold text-sm text-[var(--accent-gold)]">{t.prizePool}</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-                        Équipes
-                      </div>
-                      <div
-                        className="font-bold text-sm"
-                        style={{ color: "var(--text-primary)" }}
-                      >
-                        {t.teams}
-                      </div>
+                      <div className="text-xs text-[var(--text-muted)]">Équipes</div>
+                      <div className="font-bold text-sm text-[var(--text-primary)]">{t.teams}</div>
                     </div>
                   </div>
                 </div>
@@ -587,52 +442,26 @@ function TournamentsSection() {
 
 function RankingsSection() {
   return (
-    <section className="py-20" style={{ background: "var(--bg-secondary)" }}>
+    <section className="py-20 bg-[var(--bg-secondary)]">
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex items-center justify-between mb-10">
           <div>
-            <h2
-              className="text-2xl sm:text-3xl font-black"
-              style={{ color: "var(--text-primary)" }}
-            >
-              Classements
-            </h2>
-            <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>
-              Top joueurs de la saison en cours
-            </p>
+            <h2 className="text-2xl sm:text-3xl font-black text-[var(--text-primary)]">Classements</h2>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">Top joueurs de la saison en cours</p>
           </div>
-          <Link
-            href="/rankings"
-            className="flex items-center gap-1 text-sm font-semibold hover:opacity-80 transition-opacity"
-            style={{ color: "var(--accent-green)" }}
-          >
+          <Link href="/rankings" className="flex items-center gap-1 text-sm font-semibold hover:opacity-80 transition-opacity text-[var(--accent-green)]">
             Classement complet <IconArrow size={14} />
           </Link>
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {RANKINGS.map((r) => (
-            <div
-              key={r.game}
-              className="rounded-2xl overflow-hidden"
-              style={{
-                background: "var(--bg-card)",
-                border: "1px solid var(--border)",
-              }}
-            >
+            <div key={r.game} className="rounded-2xl overflow-hidden bg-[var(--bg-card)] border border-[var(--border)]">
               {/* En-tête du classement */}
-              <div
-                className="px-5 py-4 flex items-center justify-between"
-                style={{ borderBottom: "1px solid var(--border)" }}
-              >
+              <div className="px-5 py-4 flex items-center justify-between border-b border-[var(--border)]">
                 <div className="flex items-center gap-2">
-                  <span
-                    className="w-3 h-3 rounded-full"
-                    style={{ background: r.color }}
-                  />
-                  <h3 className="font-bold" style={{ color: "var(--text-primary)" }}>
-                    {r.game}
-                  </h3>
+                  <span className="w-3 h-3 rounded-full" style={{ background: r.color }} />
+                  <h3 className="font-bold text-[var(--text-primary)]">{r.game}</h3>
                 </div>
                 <Link
                   href={`/rankings/${r.gameSlug}`}
@@ -649,24 +478,10 @@ function RankingsSection() {
                   <Link
                     key={p.pseudo}
                     href={`/players/${p.pseudo}`}
-                    className="flex items-center gap-4 px-5 py-3.5 hover:opacity-80 transition-opacity"
-                    style={{
-                      borderBottom:
-                        i < r.top.length - 1 ? "1px solid var(--border)" : "none",
-                    }}
+                    className={`flex items-center gap-4 px-5 py-3.5 hover:opacity-80 transition-opacity ${i < r.top.length - 1 ? "border-b border-[var(--border)]" : ""}`}
                   >
                     {/* Rang */}
-                    <span
-                      className="w-6 text-center font-black text-sm flex-shrink-0"
-                      style={{
-                        color:
-                          p.rank === 1
-                            ? "#ffd700"
-                            : p.rank === 2
-                            ? "#c0c0c0"
-                            : "#cd7f32",
-                      }}
-                    >
+                    <span className={`w-6 text-center font-black text-sm flex-shrink-0 ${p.rank === 1 ? "text-[#ffd700]" : p.rank === 2 ? "text-[#c0c0c0]" : "text-[#cd7f32]"}`}>
                       {p.rank}
                     </span>
 
@@ -680,28 +495,16 @@ function RankingsSection() {
 
                     {/* Infos joueur */}
                     <div className="flex-1 min-w-0">
-                      <div
-                        className="font-semibold text-sm truncate"
-                        style={{ color: "var(--text-primary)" }}
-                      >
-                        {p.pseudo}
-                      </div>
-                      <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-                        {p.city}
-                      </div>
+                      <div className="font-semibold text-sm truncate text-[var(--text-primary)]">{p.pseudo}</div>
+                      <div className="text-xs text-[var(--text-muted)]">{p.city}</div>
                     </div>
 
                     {/* Points */}
                     <div className="text-right flex-shrink-0">
-                      <div
-                        className="text-sm font-bold"
-                        style={{ color: "var(--accent-green)" }}
-                      >
+                      <div className="text-sm font-bold text-[var(--accent-green)]">
                         {p.points.toLocaleString("fr-FR")}
                       </div>
-                      <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-                        pts
-                      </div>
+                      <div className="text-xs text-[var(--text-muted)]">pts</div>
                     </div>
                   </Link>
                 ))}
@@ -716,82 +519,39 @@ function RankingsSection() {
 
 function RecentResultsSection() {
   return (
-    <section className="py-20" style={{ background: "var(--bg-primary)" }}>
+    <section className="py-20 bg-[var(--bg-primary)]">
       <div className="max-w-7xl mx-auto px-6">
         <div className="mb-10">
-          <h2
-            className="text-2xl sm:text-3xl font-black"
-            style={{ color: "var(--text-primary)" }}
-          >
-            Derniers résultats
-          </h2>
-          <p className="mt-1 text-sm" style={{ color: "var(--text-secondary)" }}>
-            Résultats récents des tournois
-          </p>
+          <h2 className="text-2xl sm:text-3xl font-black text-[var(--text-primary)]">Derniers résultats</h2>
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">Résultats récents des tournois</p>
         </div>
 
         <div className="space-y-3">
           {RECENT_RESULTS.map((r, i) => (
             <div
               key={i}
-              className="rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6"
-              style={{
-                background: "var(--bg-card)",
-                border: "1px solid var(--border)",
-              }}
+              className="rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 bg-[var(--bg-card)] border border-[var(--border)]"
             >
               {/* Nom du tournoi */}
               <div className="flex-1 min-w-0">
-                <p
-                  className="text-xs truncate"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  {r.tournament}
-                </p>
+                <p className="text-xs truncate text-[var(--text-muted)]">{r.tournament}</p>
               </div>
 
               {/* Résultat du match */}
               <div className="flex items-center gap-4 justify-center">
-                <span
-                  className="font-bold text-sm text-right w-28 truncate"
-                  style={{
-                    color:
-                      r.winner === r.team1
-                        ? "var(--text-primary)"
-                        : "var(--text-muted)",
-                  }}
-                >
+                <span className={`font-bold text-sm text-right w-28 truncate ${r.winner === r.team1 ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"}`}>
                   {r.team1}
                 </span>
-                <span
-                  className="font-black text-sm px-3 py-1 rounded-lg tabular-nums"
-                  style={{
-                    background: "var(--bg-secondary)",
-                    color: "var(--accent-green)",
-                  }}
-                >
+                <span className="font-black text-sm px-3 py-1 rounded-lg tabular-nums bg-[var(--bg-secondary)] text-[var(--accent-green)]">
                   {r.score}
                 </span>
-                <span
-                  className="font-bold text-sm text-left w-28 truncate"
-                  style={{
-                    color:
-                      r.winner === r.team2
-                        ? "var(--text-primary)"
-                        : "var(--text-muted)",
-                  }}
-                >
+                <span className={`font-bold text-sm text-left w-28 truncate ${r.winner === r.team2 ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"}`}>
                   {r.team2}
                 </span>
               </div>
 
               {/* Date */}
-              <div
-                className="text-xs sm:w-24 flex-shrink-0 text-right"
-                style={{ color: "var(--text-muted)" }}
-              >
-                {r.date}
-              </div>
+              <div className="text-xs sm:w-24 flex-shrink-0 text-right text-[var(--text-muted)]">{r.date}</div>
             </div>
           ))}
         </div>
@@ -802,58 +562,32 @@ function RecentResultsSection() {
 
 function CtaSection() {
   return (
-    <section className="py-24" style={{ background: "var(--bg-secondary)" }}>
+    <section className="py-24 bg-[var(--bg-secondary)]">
       <div className="max-w-7xl mx-auto px-6">
-        <div
-          className="relative overflow-hidden rounded-3xl p-10 sm:p-16 text-center"
-          style={{
-            background:
-              "linear-gradient(135deg, rgba(0,230,118,0.08) 0%, rgba(79,195,247,0.08) 50%, rgba(255,215,0,0.05) 100%)",
-            border: "1px solid rgba(0,230,118,0.2)",
-          }}
-        >
+        <div className="relative overflow-hidden rounded-3xl p-10 sm:p-16 text-center bg-[linear-gradient(135deg,rgba(0,230,118,0.08)_0%,rgba(79,195,247,0.08)_50%,rgba(255,215,0,0.05)_100%)] border border-[rgba(0,230,118,0.2)]">
           {/* Décorations */}
-          <div
-            className="absolute -top-16 -left-16 w-64 h-64 rounded-full blur-3xl opacity-15 pointer-events-none"
-            style={{ background: "#00e676" }}
-          />
-          <div
-            className="absolute -bottom-16 -right-16 w-64 h-64 rounded-full blur-3xl opacity-10 pointer-events-none"
-            style={{ background: "#4fc3f7" }}
-          />
+          <div className="absolute -top-16 -left-16 w-64 h-64 rounded-full blur-3xl opacity-15 pointer-events-none bg-[#00e676]" />
+          <div className="absolute -bottom-16 -right-16 w-64 h-64 rounded-full blur-3xl opacity-10 pointer-events-none bg-[#4fc3f7]" />
 
           <div className="relative z-10">
-            <h2
-              className="text-3xl sm:text-4xl font-black mb-4"
-              style={{ color: "var(--text-primary)" }}
-            >
+            <h2 className="text-3xl sm:text-4xl font-black mb-4 text-[var(--text-primary)]">
               Tu es joueur ?{" "}
-              <span style={{ color: "var(--accent-green)" }}>
-                Rejoins la scène officielle.
-              </span>
+              <span className="text-[var(--accent-green)]">Rejoins la scène officielle.</span>
             </h2>
-            <p
-              className="text-base max-w-lg mx-auto mb-8"
-              style={{ color: "var(--text-secondary)" }}
-            >
+            <p className="text-base max-w-lg mx-auto mb-8 text-[var(--text-secondary)]">
               Crée ton profil joueur, participe aux tournois officiels,
               suis tes statistiques et grimpe dans les classements nationaux.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
               <Link
                 href="/auth/register"
-                className="px-8 py-4 rounded-xl font-bold text-base hover:opacity-90 transition-all duration-150 hover:scale-[1.02] shadow-lg"
-                style={{ background: "var(--accent-green)", color: "#09090f" }}
+                className="px-8 py-4 rounded-xl font-bold text-base hover:opacity-90 transition-all duration-150 hover:scale-[1.02] shadow-lg bg-[var(--accent-green)] text-[#09090f]"
               >
                 Créer mon profil — c&apos;est gratuit
               </Link>
               <Link
                 href="/players"
-                className="px-8 py-4 rounded-xl font-bold text-base hover:opacity-80 transition-opacity"
-                style={{
-                  border: "1px solid var(--border-bright)",
-                  color: "var(--text-primary)",
-                }}
+                className="px-8 py-4 rounded-xl font-bold text-base hover:opacity-80 transition-opacity border border-[var(--border-bright)] text-[var(--text-primary)]"
               >
                 Explorer les joueurs
               </Link>
@@ -897,42 +631,27 @@ function Footer() {
   ];
 
   return (
-    <footer
-      className="pt-16 pb-8"
-      style={{ background: "var(--bg-primary)", borderTop: "1px solid var(--border)" }}
-    >
+    <footer className="pt-16 pb-8 bg-[var(--bg-primary)] border-t border-[var(--border)]">
       <div className="max-w-7xl mx-auto px-6">
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
           {/* Marque */}
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <span
-                style={{ background: "linear-gradient(135deg,#00e676,#4fc3f7)" }}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-[#09090f] font-black text-sm flex-shrink-0"
-              >
+              <span className="w-8 h-8 rounded-lg flex items-center justify-center text-[#09090f] font-black text-sm flex-shrink-0 bg-gradient-to-br from-[#00e676] to-[#4fc3f7]">
                 GP
               </span>
               <span className="font-bold text-lg">
-                <span style={{ color: "#00e676" }}>Game</span>
-                <span style={{ color: "#f0f0f8" }}>Pedia</span>
-                <span style={{ color: "#ffd700" }} className="ml-1 text-xs">
-                  TG
-                </span>
+                <span className="text-[#00e676]">Game</span>
+                <span className="text-[#f0f0f8]">Pedia</span>
+                <span className="ml-1 text-xs text-[#ffd700]">TG</span>
               </span>
             </div>
-            <p className="text-sm leading-relaxed" style={{ color: "var(--text-muted)" }}>
+            <p className="text-sm leading-relaxed text-[var(--text-muted)]">
               La référence de l&apos;esport au Togo.
               <br />
               Tournois, joueurs et classements.
             </p>
-            <div
-              className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full"
-              style={{
-                background: "rgba(0,230,118,0.08)",
-                color: "#00e676",
-                border: "1px solid rgba(0,230,118,0.2)",
-              }}
-            >
+            <div className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full bg-[rgba(0,230,118,0.08)] text-[#00e676] border border-[rgba(0,230,118,0.2)]">
               🇹🇬 Made in Togo
             </div>
           </div>
@@ -940,20 +659,11 @@ function Footer() {
           {/* Colonnes de liens */}
           {columns.map((col) => (
             <div key={col.title}>
-              <h4
-                className="font-semibold text-sm mb-4"
-                style={{ color: "var(--text-primary)" }}
-              >
-                {col.title}
-              </h4>
+              <h4 className="font-semibold text-sm mb-4 text-[var(--text-primary)]">{col.title}</h4>
               <ul className="space-y-2.5">
                 {col.links.map((l) => (
                   <li key={l.href}>
-                    <Link
-                      href={l.href}
-                      className="text-sm hover:opacity-80 transition-opacity"
-                      style={{ color: "var(--text-muted)" }}
-                    >
+                    <Link href={l.href} className="text-sm hover:opacity-80 transition-opacity text-[var(--text-muted)]">
                       {l.label}
                     </Link>
                   </li>
@@ -964,18 +674,11 @@ function Footer() {
         </div>
 
         {/* Bas du footer */}
-        <div
-          className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs"
-          style={{ borderTop: "1px solid var(--border)", color: "var(--text-muted)" }}
-        >
+        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs border-t border-[var(--border)] text-[var(--text-muted)]">
           <p>© {new Date().getFullYear()} GamePedia TG. Tous droits réservés.</p>
           <div className="flex items-center gap-4">
-            <Link href="/privacy" className="hover:opacity-80 transition-opacity">
-              Confidentialité
-            </Link>
-            <Link href="/terms" className="hover:opacity-80 transition-opacity">
-              Conditions
-            </Link>
+            <Link href="/privacy" className="hover:opacity-80 transition-opacity">Confidentialité</Link>
+            <Link href="/terms" className="hover:opacity-80 transition-opacity">Conditions</Link>
           </div>
         </div>
       </div>

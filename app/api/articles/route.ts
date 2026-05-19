@@ -6,13 +6,11 @@ export async function GET(request: NextRequest) {
   try {
     const sp = request.nextUrl.searchParams;
     const { page, limit, skip } = getPagination(sp);
-    const game = sp.get("game") ?? undefined;
-    const category = sp.get("category") ?? undefined;
+    const tag = sp.get("tag") ?? undefined;
 
     const where = {
       isPublished: true,
-      ...(game && { game: { slug: game } }),
-      ...(category && { category }),
+      ...(tag && { tags: { has: tag } }),
     };
 
     const [articles, total] = await Promise.all([
@@ -22,9 +20,8 @@ export async function GET(request: NextRequest) {
         take: limit,
         orderBy: { publishedAt: "desc" },
         select: {
-          id: true, title: true, slug: true, excerpt: true, coverUrl: true,
-          category: true, publishedAt: true,
-          author: { select: { username: true } },
+          id: true, title: true, slug: true, excerpt: true, coverImage: true,
+          tags: true, publishedAt: true, authorName: true,
         },
       }),
       db.article.count({ where }),

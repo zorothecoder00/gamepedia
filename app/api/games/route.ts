@@ -8,7 +8,7 @@ export async function GET() {
       where: { isActive: true },
       orderBy: { name: "asc" },
       include: {
-        _count: { select: { playerProfiles: true, tournaments: true } },
+        _count: { select: { playerProfiles: true, tournamentGames: true } },
       },
     });
     return ok(games);

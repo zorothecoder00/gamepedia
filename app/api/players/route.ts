@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
         select: {
           id: true, pseudo: true, city: true, region: true, isVerified: true,
           gameProfiles: { select: { game: { select: { name: true, slug: true } } } },
-          teamMembers: {
+          teamMemberships: {
             where: { leftAt: null },
             select: { team: { select: { name: true, tag: true, slug: true } } },
           },

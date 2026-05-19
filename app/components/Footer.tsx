@@ -2,75 +2,31 @@ import Link from "next/link";
 
 export default function Footer() {
   return (
-    <footer
-      style={{
-        background: "var(--bg-secondary)",
-        borderTop: "1px solid var(--border)",
-        marginTop: "auto",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "1280px",
-          margin: "0 auto",
-          padding: "3rem 1.5rem 1.5rem",
-        }}
-      >
+    <footer className="bg-[var(--bg-secondary)] border-t border-[var(--border)] mt-auto">
+      <div className="max-w-[1280px] mx-auto px-6 pt-12 pb-6">
+
         {/* Top section */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "2rem",
-            marginBottom: "2.5rem",
-          }}
-        >
+        <div className="grid [grid-template-columns:repeat(auto-fit,minmax(200px,1fr))] gap-8 mb-10">
+
           {/* Brand */}
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
-              <span
-                style={{
-                  background: "linear-gradient(135deg, var(--accent-green), var(--accent-blue))",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                  fontWeight: 900,
-                  fontSize: "1.125rem",
-                }}
-              >
+            <div className="flex items-center gap-2 mb-3">
+              <span className="bg-gradient-to-br from-[var(--accent-green)] to-[var(--accent-blue)] bg-clip-text text-transparent font-black text-lg">
                 GamePedia
               </span>
-              <span
-                style={{
-                  background: "var(--accent-gold)",
-                  color: "#000",
-                  fontSize: "0.6rem",
-                  fontWeight: 700,
-                  padding: "1px 5px",
-                  borderRadius: "3px",
-                }}
-              >
+              <span className="bg-[var(--accent-gold)] text-black text-[0.6rem] font-bold px-[5px] py-px rounded-[3px]">
                 TG
               </span>
             </div>
-            <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", lineHeight: 1.6 }}>
+            <p className="text-[var(--text-muted)] text-[0.85rem] leading-relaxed">
               La référence de l&apos;esport au Togo. Suivez les tournois, joueurs et classements.
             </p>
-            {/* Socials */}
-            <div style={{ display: "flex", gap: "0.75rem", marginTop: "1rem" }}>
+            <div className="flex gap-3 mt-4">
               {["Twitter", "Discord", "YouTube"].map((s) => (
                 <a
                   key={s}
                   href="#"
-                  style={{
-                    color: "var(--text-muted)",
-                    fontSize: "0.75rem",
-                    textDecoration: "none",
-                    padding: "0.25rem 0.5rem",
-                    border: "1px solid var(--border)",
-                    borderRadius: "4px",
-                    transition: "color 0.15s",
-                  }}
+                  className="text-[var(--text-muted)] text-[0.75rem] no-underline px-2 py-1 border border-[var(--border)] rounded hover:text-[var(--text-primary)] transition-colors"
                 >
                   {s}
                 </a>
@@ -80,9 +36,7 @@ export default function Footer() {
 
           {/* Plateforme */}
           <div>
-            <h4 style={{ color: "var(--text-primary)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.75rem" }}>
-              Plateforme
-            </h4>
+            <h4 className="text-[var(--text-primary)] text-[0.85rem] font-semibold mb-3">Plateforme</h4>
             {[
               { href: "/games", label: "Jeux" },
               { href: "/tournaments", label: "Tournois" },
@@ -90,8 +44,8 @@ export default function Footer() {
               { href: "/teams", label: "Équipes" },
               { href: "/rankings", label: "Classements" },
             ].map((l) => (
-              <div key={l.href} style={{ marginBottom: "0.4rem" }}>
-                <Link href={l.href} style={{ color: "var(--text-muted)", fontSize: "0.85rem", textDecoration: "none" }}>
+              <div key={l.href} className="mb-[0.4rem]">
+                <Link href={l.href} className="text-[var(--text-muted)] text-[0.85rem] no-underline hover:text-[var(--text-secondary)] transition-colors">
                   {l.label}
                 </Link>
               </div>
@@ -100,16 +54,14 @@ export default function Footer() {
 
           {/* Communauté */}
           <div>
-            <h4 style={{ color: "var(--text-primary)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.75rem" }}>
-              Communauté
-            </h4>
+            <h4 className="text-[var(--text-primary)] text-[0.85rem] font-semibold mb-3">Communauté</h4>
             {[
               { href: "/news", label: "Actualités" },
               { href: "/auth/register", label: "Rejoindre" },
               { href: "/profile", label: "Mon profil" },
             ].map((l) => (
-              <div key={l.href} style={{ marginBottom: "0.4rem" }}>
-                <Link href={l.href} style={{ color: "var(--text-muted)", fontSize: "0.85rem", textDecoration: "none" }}>
+              <div key={l.href} className="mb-[0.4rem]">
+                <Link href={l.href} className="text-[var(--text-muted)] text-[0.85rem] no-underline hover:text-[var(--text-secondary)] transition-colors">
                   {l.label}
                 </Link>
               </div>
@@ -118,16 +70,14 @@ export default function Footer() {
 
           {/* Légal */}
           <div>
-            <h4 style={{ color: "var(--text-primary)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.75rem" }}>
-              Légal
-            </h4>
+            <h4 className="text-[var(--text-primary)] text-[0.85rem] font-semibold mb-3">Légal</h4>
             {[
               { href: "#", label: "Conditions d'utilisation" },
               { href: "#", label: "Politique de confidentialité" },
               { href: "#", label: "Mentions légales" },
             ].map((l) => (
-              <div key={l.label} style={{ marginBottom: "0.4rem" }}>
-                <Link href={l.href} style={{ color: "var(--text-muted)", fontSize: "0.85rem", textDecoration: "none" }}>
+              <div key={l.label} className="mb-[0.4rem]">
+                <Link href={l.href} className="text-[var(--text-muted)] text-[0.85rem] no-underline hover:text-[var(--text-secondary)] transition-colors">
                   {l.label}
                 </Link>
               </div>
@@ -136,23 +86,9 @@ export default function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div
-          style={{
-            borderTop: "1px solid var(--border)",
-            paddingTop: "1.25rem",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "0.5rem",
-          }}
-        >
-          <p style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>
-            © 2025 GamePedia TG. Tous droits réservés.
-          </p>
-          <p style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>
-            Fait avec ❤️ pour l&apos;esport togolais 🇹🇬
-          </p>
+        <div className="border-t border-[var(--border)] pt-5 flex items-center justify-between flex-wrap gap-2">
+          <p className="text-[var(--text-muted)] text-[0.8rem]">© 2025 GamePedia TG. Tous droits réservés.</p>
+          <p className="text-[var(--text-muted)] text-[0.8rem]">Fait avec ❤️ pour l&apos;esport togolais 🇹🇬</p>
         </div>
       </div>
     </footer>

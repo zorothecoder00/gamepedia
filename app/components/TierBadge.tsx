@@ -18,19 +18,8 @@ export default function TierBadge({ tier, small }: { tier: Tier; small?: boolean
   const color = tierColors[tier];
   return (
     <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: `${color}22`,
-        color: color,
-        border: `1px solid ${color}55`,
-        borderRadius: "4px",
-        fontWeight: 700,
-        fontSize: small ? "0.65rem" : "0.75rem",
-        padding: small ? "1px 6px" : "2px 8px",
-        letterSpacing: "0.5px",
-      }}
+      className={`inline-flex items-center justify-center rounded font-bold tracking-wide ${small ? "text-[0.65rem] px-1.5 py-px" : "text-[0.75rem] px-2 py-0.5"}`}
+      style={{ background: `${color}22`, color, border: `1px solid ${color}55` }}
     >
       {small ? tier : tierLabels[tier]}
     </span>

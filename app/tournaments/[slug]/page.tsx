@@ -2,131 +2,143 @@
 import { useState } from "react";
 import Link from "next/link";
 import TierBadge from "../../components/TierBadge";
+import { useApi } from "@/hooks/useApi";
 
-const demoTournament = {
-  slug: "valorant-cup-lome-2025",
-  name: "Valorant Cup Lomé 2025",
-  edition: 3,
-  game: "Valorant",
-  tier: "A" as const,
-  status: "COMPLETED" as const,
-  format: "SINGLE_ELIMINATION",
-  participantType: "TEAM",
-  location: "Lomé, Togo",
-  venue: "Centre de la Jeunesse de Lomé",
-  isOnline: false,
-  startDate: "2025-03-15",
-  endDate: "2025-03-20",
-  prizePool: 300000,
-  currency: "XOF",
-  prizeDistribution: { "1": 50, "2": 30, "3": 10, "4": 10 },
-  description: "La 3ème édition de la Valorant Cup Lomé réunit les meilleures équipes du Togo dans un tournoi en élimination directe sur 3 jours.",
-  rules: "Format Bo3 jusqu'en finale (Bo5). Règlement complet disponible sur demande.",
-  organizerName: "TG Esports Association",
-  streamUrl: "https://twitch.tv/gamepediatg",
-  participants: [
-    { name: "TGO Esports", tag: "TGO", seed: 1, placement: 1, prizeWon: 150000 },
-    { name: "Lomé Gaming", tag: "LMG", seed: 4, placement: 2, prizeWon: 90000 },
-    { name: "Northern Force", tag: "NFR", seed: 2, placement: 3, prizeWon: 30000 },
-    { name: "Togo Legends", tag: "TGL", seed: 3, placement: 4, prizeWon: 30000 },
-    { name: "Savane Squad", tag: "SVS", seed: 5, placement: 5, prizeWon: 0 },
-    { name: "Black Panther Gaming", tag: "BPG", seed: 6, placement: 6, prizeWon: 0 },
-    { name: "Lome Hawks", tag: "LHK", seed: 7, placement: 7, prizeWon: 0 },
-    { name: "Atakpame Rising", tag: "ATK", seed: 8, placement: 8, prizeWon: 0 },
-  ],
-  matches: [
-    { round: "Quarts de finale", team1: "TGO Esports", score1: 2, team2: "Atakpame Rising", score2: 0, winner: "TGO Esports" },
-    { round: "Quarts de finale", team1: "Northern Force", score1: 2, team2: "Lome Hawks", score2: 1, winner: "Northern Force" },
-    { round: "Quarts de finale", team1: "Lomé Gaming", score1: 2, team2: "Savane Squad", score2: 0, winner: "Lomé Gaming" },
-    { round: "Quarts de finale", team1: "Togo Legends", score1: 2, team2: "Black Panther Gaming", score2: 0, winner: "Togo Legends" },
-    { round: "Demi-finales", team1: "TGO Esports", score1: 2, team2: "Togo Legends", score2: 1, winner: "TGO Esports" },
-    { round: "Demi-finales", team1: "Lomé Gaming", score1: 2, team2: "Northern Force", score2: 0, winner: "Lomé Gaming" },
-    { round: "Finale", team1: "TGO Esports", score1: 3, team2: "Lomé Gaming", score2: 1, winner: "TGO Esports" },
-  ],
-};
+interface Participant {
+  id: string; finalPlacement?: number; prizeWon?: number; seed?: number;
+  player?: { pseudo: string; city?: string };
+  team?: { name: string; tag: string; slug: string };
+}
 
-const tabs = ["Infos", "Participants", "Bracket", "Résultats", "Podium"];
+interface MatchParticipant {
+  score?: number; isWinner?: boolean;
+  player?: { pseudo: string };
+  team?: { name: string; tag: string };
+}
 
-const statusInfo = {
+interface Match {
+  id: string;
+  participants: MatchParticipant[];
+}
+
+interface Stage {
+  id: string; name: string; order: number;
+  matches: Match[];
+}
+
+interface Tournament {
+  slug: string; name: string; edition?: number;
+  tier: "S" | "A" | "B" | "C";
+  status: "UPCOMING" | "ONGOING" | "COMPLETED" | "CANCELLED";
+  format?: string; participantType?: string;
+  location?: string; venue?: string; isOnline?: boolean;
+  startDate: string; endDate?: string;
+  prizePool?: number; currency?: string;
+  prizeDistribution?: Record<string, number>;
+  description?: string; rules?: string;
+  organizerName?: string; streamUrl?: string;
+  games: { game: { name: string; slug: string } }[];
+  participants: Participant[];
+  _count: { participants: number };
+}
+
+const TABS = ["Infos", "Participants", "Bracket", "Résultats", "Podium"];
+
+const STATUS_INFO: Record<string, { label: string; color: string }> = {
   UPCOMING: { label: "À venir", color: "var(--accent-blue)" },
   ONGOING: { label: "En cours", color: "var(--accent-green)" },
   COMPLETED: { label: "Terminé", color: "var(--text-muted)" },
   CANCELLED: { label: "Annulé", color: "var(--accent-red)" },
 };
 
+function InfoItem({ icon, text }: { icon: string; text: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span>{icon}</span>
+      <span className="text-sm text-[var(--text-secondary)]">{text}</span>
+    </div>
+  );
+}
+
+function MatchRow({ name, score, isWinner }: { name: string; score?: number; isWinner?: boolean }) {
+  return (
+    <div className={`px-3.5 py-2 flex justify-between items-center ${isWinner ? "bg-[rgba(0,230,118,0.06)]" : "bg-transparent"}`}>
+      <span className={`text-[0.82rem] ${isWinner ? "text-[var(--accent-green)] font-bold" : "text-[var(--text-muted)]"}`}>{name}</span>
+      <span className={`font-bold text-sm ${isWinner ? "text-[var(--accent-green)]" : "text-[var(--text-muted)]"}`}>{score ?? "—"}</span>
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-7">
+      <h3 className="font-bold text-[0.95rem] text-[var(--text-primary)] mb-3.5 pb-2 border-b border-[var(--border)]">{title}</h3>
+      {children}
+    </div>
+  );
+}
+
 export default function TournamentPage({ params }: { params: { slug: string } }) {
   const [activeTab, setActiveTab] = useState(0);
-  const tournament = demoTournament;
-  const st = statusInfo[tournament.status];
+  const { slug } = params;
+
+  const { data: tournament, loading } = useApi<Tournament>(`/api/tournaments/${slug}`);
+  const { data: bracket, loading: loadingBracket } = useApi<Stage[]>(
+    activeTab === 2 ? `/api/tournaments/${slug}/bracket` : null, [activeTab],
+  );
+
+  if (loading) {
+    return <div className="max-w-[1280px] mx-auto my-16 text-center text-[var(--text-muted)]">Chargement...</div>;
+  }
+  if (!tournament) {
+    return <div className="max-w-[1280px] mx-auto my-16 text-center text-[var(--text-muted)]">Tournoi introuvable.</div>;
+  }
+
+  const st = STATUS_INFO[tournament.status] ?? STATUS_INFO.UPCOMING;
+  const gameName = tournament.games?.[0]?.game.name ?? "—";
+  const podium = [...tournament.participants]
+    .filter((p) => p.finalPlacement)
+    .sort((a, b) => (a.finalPlacement ?? 99) - (b.finalPlacement ?? 99))
+    .slice(0, 4);
 
   return (
     <div>
       {/* Banner header */}
-      <div
-        style={{
-          background: "linear-gradient(135deg, rgba(255,107,53,0.15), var(--bg-primary))",
-          borderBottom: "1px solid var(--border)",
-          padding: "2rem 1.5rem",
-        }}
-      >
-        <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+      <div className="px-6 py-8 border-b border-[var(--border)] bg-[linear-gradient(135deg,rgba(255,107,53,0.15),var(--bg-primary))]">
+        <div className="max-w-[1280px] mx-auto">
           {/* Breadcrumb */}
-          <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", marginBottom: "1rem", fontSize: "0.8rem" }}>
-            <Link href="/tournaments" style={{ color: "var(--text-muted)", textDecoration: "none" }}>Tournois</Link>
-            <span style={{ color: "var(--border-bright)" }}>›</span>
-            <span style={{ color: "var(--text-secondary)" }}>{tournament.name}</span>
+          <div className="flex gap-1.5 items-center mb-4 text-[0.8rem]">
+            <Link href="/tournaments" className="text-[var(--text-muted)] no-underline hover:text-[var(--text-secondary)]">Tournois</Link>
+            <span className="text-[var(--border-bright)]">›</span>
+            <span className="text-[var(--text-secondary)]">{tournament.name}</span>
           </div>
 
-          <div style={{ display: "flex", alignItems: "flex-start", gap: "1.5rem", flexWrap: "wrap" }}>
-            {/* Logo */}
-            <div
-              style={{
-                width: "80px",
-                height: "80px",
-                borderRadius: "12px",
-                background: "rgba(255,107,53,0.12)",
-                border: "2px solid rgba(255,107,53,0.35)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "2.5rem",
-                flexShrink: 0,
-              }}
-            >
+          <div className="flex items-start gap-6 flex-wrap">
+            <div className="w-20 h-20 rounded-xl bg-[rgba(255,107,53,0.12)] border-2 border-[rgba(255,107,53,0.35)] flex items-center justify-center text-[2.5rem] shrink-0">
               🏆
             </div>
-
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", marginBottom: "0.5rem" }}>
-                <h1 style={{ color: "var(--text-primary)", fontSize: "1.75rem", fontWeight: 800 }}>{tournament.name}</h1>
+            <div className="flex-1">
+              <div className="flex items-center gap-3 flex-wrap mb-2">
+                <h1 className="text-[1.75rem] font-black text-[var(--text-primary)]">{tournament.name}</h1>
                 <TierBadge tier={tournament.tier} />
                 <span
-                  style={{
-                    background: "transparent",
-                    color: st.color,
-                    fontSize: "0.78rem",
-                    fontWeight: 600,
-                    border: `1px solid ${st.color}55`,
-                    borderRadius: "4px",
-                    padding: "2px 8px",
-                  }}
+                  className="text-[0.78rem] font-semibold px-2 py-0.5 rounded"
+                  style={{ color: st.color, border: `1px solid ${st.color}55` }}
                 >
                   {st.label}
                 </span>
               </div>
-
-              <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
-                <InfoItem icon="🎮" text={tournament.game} />
-                <InfoItem icon="📅" text={`${new Date(tournament.startDate).toLocaleDateString("fr-FR")} → ${new Date(tournament.endDate).toLocaleDateString("fr-FR")}`} />
-                <InfoItem icon="📍" text={tournament.location} />
-                <InfoItem icon="👥" text={`${tournament.participants.length} équipes`} />
+              <div className="flex gap-6 flex-wrap mb-3">
+                <InfoItem icon="🎮" text={gameName} />
+                <InfoItem icon="📅" text={`${new Date(tournament.startDate).toLocaleDateString("fr-FR")}${tournament.endDate ? ` → ${new Date(tournament.endDate).toLocaleDateString("fr-FR")}` : ""}`} />
+                {tournament.location && <InfoItem icon="📍" text={tournament.location} />}
+                <InfoItem icon="👥" text={`${tournament._count.participants} participants`} />
               </div>
-
-              {tournament.prizePool > 0 && (
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <span style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>Prize Pool :</span>
-                  <span style={{ color: "var(--accent-gold)", fontWeight: 800, fontSize: "1.25rem" }}>
-                    {tournament.prizePool.toLocaleString()} {tournament.currency}
+              {tournament.prizePool && tournament.prizePool > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[0.82rem] text-[var(--text-muted)]">Prize Pool :</span>
+                  <span className="font-black text-xl text-[var(--accent-gold)]">
+                    {tournament.prizePool.toLocaleString()} {tournament.currency ?? "XOF"}
                   </span>
                 </div>
               )}
@@ -136,22 +148,13 @@ export default function TournamentPage({ params }: { params: { slug: string } })
       </div>
 
       {/* Tabs */}
-      <div style={{ background: "var(--bg-secondary)", borderBottom: "1px solid var(--border)" }}>
-        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 1.5rem", display: "flex" }}>
-          {tabs.map((tab, i) => (
+      <div className="bg-[var(--bg-secondary)] border-b border-[var(--border)]">
+        <div className="max-w-[1280px] mx-auto px-6 flex">
+          {TABS.map((tab, i) => (
             <button
               key={tab}
               onClick={() => setActiveTab(i)}
-              style={{
-                padding: "0.875rem 1.125rem",
-                background: "none",
-                border: "none",
-                borderBottom: activeTab === i ? "2px solid var(--tier-s)" : "2px solid transparent",
-                color: activeTab === i ? "var(--tier-s)" : "var(--text-secondary)",
-                fontWeight: activeTab === i ? 600 : 400,
-                fontSize: "0.88rem",
-                cursor: "pointer",
-              }}
+              className={`px-[1.125rem] py-3.5 bg-transparent border-none text-sm cursor-pointer transition-colors border-b-2 ${activeTab === i ? "border-[var(--tier-s)] text-[var(--tier-s)] font-semibold" : "border-transparent text-[var(--text-secondary)] font-normal"}`}
             >
               {tab}
             </button>
@@ -160,30 +163,35 @@ export default function TournamentPage({ params }: { params: { slug: string } })
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "2rem 1.5rem" }}>
+      <div className="max-w-[1280px] mx-auto px-6 py-8">
+
         {/* Infos */}
         {activeTab === 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "2rem" }}>
+          <div className="grid [grid-template-columns:2fr_1fr] gap-8">
             <div>
-              <Section title="Description">
-                <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", lineHeight: 1.7 }}>{tournament.description}</p>
-              </Section>
-              <Section title="Règlement">
-                <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", lineHeight: 1.7 }}>{tournament.rules}</p>
-              </Section>
+              {tournament.description && (
+                <Section title="Description">
+                  <p className="text-[0.9rem] text-[var(--text-secondary)] leading-[1.7]">{tournament.description}</p>
+                </Section>
+              )}
+              {tournament.rules && (
+                <Section title="Règlement">
+                  <p className="text-[0.9rem] text-[var(--text-secondary)] leading-[1.7]">{tournament.rules}</p>
+                </Section>
+              )}
             </div>
             <div>
               <Section title="Informations">
                 {[
-                  { label: "Format", value: tournament.format.replace(/_/g, " ") },
-                  { label: "Participants", value: tournament.participantType === "TEAM" ? "Équipes" : "Solo" },
-                  { label: "Lieu", value: tournament.venue },
-                  { label: "Organisateur", value: tournament.organizerName },
-                  { label: "Stream", value: tournament.streamUrl ? "Voir le stream →" : "Non disponible" },
-                ].map((item) => (
-                  <div key={item.label} style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.625rem", paddingBottom: "0.625rem", borderBottom: "1px solid var(--border)" }}>
-                    <span style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>{item.label}</span>
-                    <span style={{ color: "var(--text-primary)", fontSize: "0.82rem", fontWeight: 500 }}>{item.value}</span>
+                  tournament.format && { label: "Format", value: tournament.format.replace(/_/g, " ") },
+                  tournament.participantType && { label: "Participants", value: tournament.participantType === "TEAM" ? "Équipes" : "Solo" },
+                  tournament.venue && { label: "Lieu", value: tournament.venue },
+                  tournament.organizerName && { label: "Organisateur", value: tournament.organizerName },
+                  tournament.streamUrl && { label: "Stream", value: "Voir le stream →" },
+                ].filter(Boolean).map((item) => item && (
+                  <div key={item.label} className="flex justify-between mb-2.5 pb-2.5 border-b border-[var(--border)]">
+                    <span className="text-[0.82rem] text-[var(--text-muted)]">{item.label}</span>
+                    <span className="text-[0.82rem] font-medium text-[var(--text-primary)]">{item.value}</span>
                   </div>
                 ))}
               </Section>
@@ -194,95 +202,25 @@ export default function TournamentPage({ params }: { params: { slug: string } })
         {/* Participants */}
         {activeTab === 1 && (
           <div>
-            <h2 style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: "1.1rem", marginBottom: "1.25rem" }}>
-              Participants inscrits — {tournament.participants.length} équipes
+            <h2 className="font-bold text-[1.1rem] text-[var(--text-primary)] mb-5">
+              Participants inscrits — {tournament._count.participants}
             </h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "0.875rem" }}>
-              {tournament.participants.map((p) => (
-                <div
-                  key={p.name}
-                  style={{
-                    background: "var(--bg-card)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "8px",
-                    padding: "1rem 1.125rem",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.875rem",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "36px",
-                      height: "36px",
-                      borderRadius: "6px",
-                      background: "rgba(255,107,53,0.12)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "var(--tier-s)",
-                      fontWeight: 700,
-                      fontSize: "0.7rem",
-                    }}
-                  >
-                    {p.tag}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: "0.88rem" }}>{p.name}</div>
-                    <div style={{ color: "var(--text-muted)", fontSize: "0.73rem" }}>Tête de série #{p.seed}</div>
-                  </div>
-                  {p.placement && p.placement <= 3 && (
-                    <span style={{ fontSize: "1.2rem" }}>
-                      {p.placement === 1 ? "🥇" : p.placement === 2 ? "🥈" : "🥉"}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Bracket */}
-        {activeTab === 2 && (
-          <div>
-            <h2 style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: "1.1rem", marginBottom: "1.25rem" }}>
-              Bracket — Élimination directe
-            </h2>
-            <div style={{ display: "flex", gap: "1.5rem", overflowX: "auto", paddingBottom: "1rem" }}>
-              {["Quarts de finale", "Demi-finales", "Finale"].map((round) => {
-                const roundMatches = tournament.matches.filter((m) => m.round === round);
+            <div className="grid gap-3.5 [grid-template-columns:repeat(auto-fill,minmax(250px,1fr))]">
+              {tournament.participants.map((p) => {
+                const name = p.team?.name ?? p.player?.pseudo ?? "—";
+                const tag = p.team?.tag ?? p.player?.pseudo?.slice(0, 3) ?? "—";
                 return (
-                  <div key={round} style={{ minWidth: "240px", flex: "0 0 240px" }}>
-                    <div
-                      style={{
-                        color: "var(--text-muted)",
-                        fontSize: "0.78rem",
-                        fontWeight: 600,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.5px",
-                        marginBottom: "0.875rem",
-                        textAlign: "center",
-                      }}
-                    >
-                      {round}
+                  <div key={p.id} className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg px-[1.125rem] py-4 flex items-center gap-3.5">
+                    <div className="w-9 h-9 rounded-lg bg-[rgba(255,107,53,0.12)] flex items-center justify-center text-[var(--tier-s)] font-bold text-[0.7rem]">
+                      {tag}
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                      {roundMatches.map((m, i) => (
-                        <div
-                          key={i}
-                          style={{
-                            background: "var(--bg-card)",
-                            border: "1px solid var(--border)",
-                            borderRadius: "8px",
-                            overflow: "hidden",
-                          }}
-                        >
-                          <MatchRow name={m.team1} score={m.score1} isWinner={m.winner === m.team1} />
-                          <div style={{ borderTop: "1px solid var(--border)" }} />
-                          <MatchRow name={m.team2} score={m.score2} isWinner={m.winner === m.team2} />
-                        </div>
-                      ))}
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm text-[var(--text-primary)]">{name}</div>
+                      {p.seed && <div className="text-[0.73rem] text-[var(--text-muted)]">Seed #{p.seed}</div>}
                     </div>
+                    {p.finalPlacement && p.finalPlacement <= 3 && (
+                      <span className="text-xl">{p.finalPlacement === 1 ? "🥇" : p.finalPlacement === 2 ? "🥈" : "🥉"}</span>
+                    )}
                   </div>
                 );
               })}
@@ -290,171 +228,117 @@ export default function TournamentPage({ params }: { params: { slug: string } })
           </div>
         )}
 
+        {/* Bracket */}
+        {activeTab === 2 && (
+          <div>
+            <h2 className="font-bold text-[1.1rem] text-[var(--text-primary)] mb-5">Bracket</h2>
+            {loadingBracket ? (
+              <p className="text-[var(--text-muted)]">Chargement du bracket...</p>
+            ) : !bracket || bracket.length === 0 ? (
+              <p className="text-[var(--text-muted)]">Bracket non disponible.</p>
+            ) : (
+              <div className="flex gap-6 overflow-x-auto pb-4">
+                {bracket.map((stage) => (
+                  <div key={stage.id} className="min-w-[240px] flex-[0_0_240px]">
+                    <div className="text-[0.78rem] font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-3.5 text-center">
+                      {stage.name}
+                    </div>
+                    <div className="flex flex-col gap-4">
+                      {stage.matches.map((match) => {
+                        const [p1, p2] = match.participants;
+                        if (!p1) return null;
+                        const n1 = p1.team?.name ?? p1.player?.pseudo ?? "TBD";
+                        const n2 = p2?.team?.name ?? p2?.player?.pseudo ?? "TBD";
+                        return (
+                          <div key={match.id} className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg overflow-hidden">
+                            <MatchRow name={n1} score={p1.score} isWinner={p1.isWinner} />
+                            <div className="border-t border-[var(--border)]" />
+                            <MatchRow name={n2} score={p2?.score} isWinner={p2?.isWinner} />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Résultats */}
         {activeTab === 3 && (
           <div>
-            <h2 style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: "1.1rem", marginBottom: "1.25rem" }}>
-              Résultats des matchs
-            </h2>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-              {tournament.matches.map((m, i) => (
-                <div
-                  key={i}
-                  style={{
-                    background: "var(--bg-card)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "8px",
-                    padding: "0.875rem 1.25rem",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "1rem",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <span
-                    style={{
-                      color: "var(--text-muted)",
-                      fontSize: "0.72rem",
-                      fontWeight: 600,
-                      textTransform: "uppercase",
-                      minWidth: "130px",
-                    }}
-                  >
-                    {m.round}
-                  </span>
-                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "0.875rem" }}>
-                    <span
-                      style={{
-                        color: m.winner === m.team1 ? "var(--text-primary)" : "var(--text-muted)",
-                        fontWeight: m.winner === m.team1 ? 700 : 400,
-                        fontSize: "0.9rem",
-                        flex: 1,
-                        textAlign: "right",
-                      }}
-                    >
-                      {m.team1}
-                    </span>
-                    <span
-                      style={{
-                        color: "var(--text-primary)",
-                        fontWeight: 800,
-                        fontSize: "1rem",
-                        background: "var(--bg-primary)",
-                        padding: "0.25rem 0.75rem",
-                        borderRadius: "5px",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {m.score1} – {m.score2}
-                    </span>
-                    <span
-                      style={{
-                        color: m.winner === m.team2 ? "var(--text-primary)" : "var(--text-muted)",
-                        fontWeight: m.winner === m.team2 ? 700 : 400,
-                        fontSize: "0.9rem",
-                        flex: 1,
-                      }}
-                    >
-                      {m.team2}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <h2 className="font-bold text-[1.1rem] text-[var(--text-primary)] mb-5">Résultats des matchs</h2>
+            {!bracket || bracket.length === 0 ? (
+              <p className="text-[var(--text-muted)]">Aucun résultat disponible.</p>
+            ) : (
+              <div className="flex flex-col gap-2.5">
+                {bracket.flatMap((stage) =>
+                  stage.matches.map((match) => {
+                    const [p1, p2] = match.participants;
+                    if (!p1 || !p2) return null;
+                    const n1 = p1.team?.name ?? p1.player?.pseudo ?? "TBD";
+                    const n2 = p2.team?.name ?? p2.player?.pseudo ?? "TBD";
+                    return (
+                      <div key={match.id} className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg px-5 py-3.5 flex items-center gap-4 flex-wrap">
+                        <span className="text-[0.72rem] font-semibold uppercase tracking-wide text-[var(--text-muted)] min-w-[130px]">{stage.name}</span>
+                        <div className="flex-1 flex items-center gap-3.5">
+                          <span className={`text-[0.9rem] flex-1 text-right ${p1.isWinner ? "font-bold text-[var(--text-primary)]" : "text-[var(--text-muted)]"}`}>{n1}</span>
+                          <span className="font-black text-base text-[var(--text-primary)] bg-[var(--bg-primary)] px-3 py-1 rounded whitespace-nowrap">
+                            {p1.score ?? "—"} – {p2.score ?? "—"}
+                          </span>
+                          <span className={`text-[0.9rem] flex-1 ${p2.isWinner ? "font-bold text-[var(--text-primary)]" : "text-[var(--text-muted)]"}`}>{n2}</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </div>
         )}
 
         {/* Podium */}
         {activeTab === 4 && (
           <div>
-            <h2 style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: "1.1rem", marginBottom: "2rem" }}>
-              Classement final & Distribution des prix
-            </h2>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", maxWidth: "600px" }}>
-              {tournament.participants
-                .filter((p) => p.placement && p.placement <= 4)
-                .sort((a, b) => (a.placement ?? 99) - (b.placement ?? 99))
-                .map((p) => {
+            <h2 className="font-bold text-[1.1rem] text-[var(--text-primary)] mb-8">Classement final & Distribution des prix</h2>
+            {podium.length === 0 ? (
+              <p className="text-[var(--text-muted)]">Résultats non encore disponibles.</p>
+            ) : (
+              <div className="flex flex-col gap-3 max-w-[600px]">
+                {podium.map((p) => {
                   const podiumIcons: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉", 4: "🏅" };
-                  const pct = tournament.prizeDistribution[String(p.placement) as keyof typeof tournament.prizeDistribution];
+                  const name = p.team?.name ?? p.player?.pseudo ?? "—";
+                  const tag = p.team?.tag ?? "";
+                  const pct = tournament.prizeDistribution?.[String(p.finalPlacement)];
                   return (
                     <div
-                      key={p.name}
-                      style={{
-                        background: p.placement === 1 ? "rgba(255,215,0,0.08)" : "var(--bg-card)",
-                        border: p.placement === 1 ? "1px solid rgba(255,215,0,0.3)" : "1px solid var(--border)",
-                        borderRadius: "10px",
-                        padding: "1.125rem 1.5rem",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "1rem",
-                      }}
+                      key={p.id}
+                      className={`rounded-xl px-6 py-[1.125rem] flex items-center gap-4 border ${p.finalPlacement === 1 ? "bg-[rgba(255,215,0,0.08)] border-[rgba(255,215,0,0.3)]" : "bg-[var(--bg-card)] border-[var(--border)]"}`}
                     >
-                      <span style={{ fontSize: "2rem" }}>{podiumIcons[p.placement ?? 4]}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: "1rem" }}>{p.name}</div>
-                        <div style={{ color: "var(--text-muted)", fontSize: "0.78rem" }}>[{p.tag}]</div>
+                      <span className="text-3xl">{podiumIcons[p.finalPlacement ?? 4]}</span>
+                      <div className="flex-1">
+                        <div className="font-bold text-base text-[var(--text-primary)]">{name}</div>
+                        {tag && <div className="text-[0.78rem] text-[var(--text-muted)]">[{tag}]</div>}
                       </div>
-                      <div style={{ textAlign: "right" }}>
-                        {p.prizeWon > 0 ? (
+                      <div className="text-right">
+                        {p.prizeWon && p.prizeWon > 0 ? (
                           <>
-                            <div style={{ color: "var(--accent-gold)", fontWeight: 800, fontSize: "1.1rem" }}>
-                              {p.prizeWon.toLocaleString()} XOF
-                            </div>
-                            <div style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>{pct}% du prize pool</div>
+                            <div className="font-black text-[1.1rem] text-[var(--accent-gold)]">{p.prizeWon.toLocaleString()} XOF</div>
+                            {pct && <div className="text-[0.72rem] text-[var(--text-muted)]">{pct}% du prize pool</div>}
                           </>
                         ) : (
-                          <div style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>Sans prix</div>
+                          <div className="text-[0.82rem] text-[var(--text-muted)]">Sans prix</div>
                         )}
                       </div>
                     </div>
                   );
                 })}
-            </div>
+              </div>
+            )}
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function InfoItem({ icon, text }: { icon: string; text: string }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-      <span>{icon}</span>
-      <span style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>{text}</span>
-    </div>
-  );
-}
-
-function MatchRow({ name, score, isWinner }: { name: string; score: number; isWinner: boolean }) {
-  return (
-    <div
-      style={{
-        padding: "0.5rem 0.875rem",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        background: isWinner ? "rgba(0,230,118,0.06)" : "transparent",
-      }}
-    >
-      <span style={{ color: isWinner ? "var(--accent-green)" : "var(--text-muted)", fontSize: "0.82rem", fontWeight: isWinner ? 700 : 400 }}>
-        {name}
-      </span>
-      <span style={{ color: isWinner ? "var(--accent-green)" : "var(--text-muted)", fontWeight: 700, fontSize: "0.88rem" }}>
-        {score}
-      </span>
-    </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ marginBottom: "1.75rem" }}>
-      <h3 style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: "0.95rem", marginBottom: "0.875rem", paddingBottom: "0.5rem", borderBottom: "1px solid var(--border)" }}>
-        {title}
-      </h3>
-      {children}
     </div>
   );
 }

@@ -17,7 +17,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
 
     const wins = participations.filter((p) => p.finalPlacement === 1).length;
     const top3 = participations.filter((p) => p.finalPlacement !== null && p.finalPlacement <= 3).length;
-    const totalPrize = participations.reduce((acc, p) => acc + (p.prizeWon?.toNumber() ?? 0), 0);
+    const totalPrize = participations.reduce((acc, p) => acc + (p.prizeWon ?? 0), 0);
 
     return ok({
       tournamentsPlayed: participations.length,

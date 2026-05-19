@@ -14,7 +14,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
           where: { leftAt: null },
           include: { player: { select: { id: true, pseudo: true, city: true, isVerified: true } } },
         },
-        _count: { select: { members: true, participations: true } },
+        _count: { select: { members: true, tournamentParticipations: true } },
       },
     });
     if (!team) return notFound("Équipe introuvable");

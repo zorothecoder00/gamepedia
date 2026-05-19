@@ -12,7 +12,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
 
     const stages = await db.tournamentStage.findMany({
       where: { tournamentId: tournament.id },
-      orderBy: { order: "asc" },
+      orderBy: { stageNumber: "asc" },
       include: { _count: { select: { matches: true } } },
     });
 

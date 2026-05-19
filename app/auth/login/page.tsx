@@ -1,131 +1,82 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useMutation } from "@/hooks/useMutation";
+
+interface LoginResponse {
+  token: string;
+  user: { id: string; email: string; username: string; role: string };
+}
 
 export default function LoginPage() {
+  const router = useRouter();
   const [form, setForm] = useState({ email: "", password: "", remember: false });
   const [showPassword, setShowPassword] = useState(false);
+  const { mutate, loading } = useMutation<LoginResponse>("/api/auth/login");
+
+  const handleSubmit = async () => {
+    const result = await mutate({ email: form.email, password: form.password });
+    if (result) {
+      localStorage.setItem("gp_token", result.token);
+      localStorage.setItem("gp_user", JSON.stringify(result.user));
+      router.push("/profile");
+    }
+  };
 
   return (
-    <div
-      style={{
-        minHeight: "calc(100vh - 120px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "2rem 1.5rem",
-        background: "radial-gradient(ellipse at 50% 0%, rgba(0,230,118,0.06) 0%, transparent 60%)",
-      }}
-    >
-      <div style={{ width: "100%", maxWidth: "420px" }}>
+    <div className="min-h-[calc(100vh-120px)] flex items-center justify-center px-6 py-8 bg-[radial-gradient(ellipse_at_50%_0%,rgba(0,230,118,0.06)_0%,transparent_60%)]">
+      <div className="w-full max-w-[420px]">
+
         {/* Logo */}
-        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
-            <span
-              style={{
-                background: "linear-gradient(135deg, var(--accent-green), var(--accent-blue))",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-                fontWeight: 900,
-                fontSize: "1.5rem",
-              }}
-            >
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <span className="font-black text-2xl bg-gradient-to-br from-[var(--accent-green)] to-[var(--accent-blue)] bg-clip-text text-transparent">
               GamePedia
             </span>
-            <span style={{ background: "var(--accent-gold)", color: "#000", fontSize: "0.7rem", fontWeight: 700, padding: "1px 6px", borderRadius: "3px" }}>
-              TG
-            </span>
+            <span className="bg-[var(--accent-gold)] text-black text-[0.7rem] font-bold px-1.5 py-0.5 rounded">TG</span>
           </div>
-          <h1 style={{ color: "var(--text-primary)", fontSize: "1.375rem", fontWeight: 700, marginBottom: "0.25rem" }}>
-            Connexion
-          </h1>
-          <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
-            Bienvenue ! Connectez-vous à votre compte.
-          </p>
+          <h1 className="text-[1.375rem] font-bold text-[var(--text-primary)] mb-1">Connexion</h1>
+          <p className="text-sm text-[var(--text-muted)]">Bienvenue ! Connectez-vous à votre compte.</p>
         </div>
 
         {/* Form card */}
-        <div
-          style={{
-            background: "var(--bg-card)",
-            border: "1px solid var(--border)",
-            borderRadius: "14px",
-            padding: "2rem",
-          }}
-        >
-          <div style={{ display: "flex", flexDirection: "column", gap: "1.125rem" }}>
+        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl p-8">
+          <div className="flex flex-col gap-[1.125rem]">
+
             {/* Email */}
             <div>
-              <label style={{ display: "block", color: "var(--text-secondary)", fontSize: "0.85rem", fontWeight: 500, marginBottom: "0.4rem" }}>
-                Email ou pseudo
-              </label>
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1.5">Email ou pseudo</label>
               <input
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 placeholder="exemple@email.com"
-                style={{
-                  width: "100%",
-                  background: "var(--bg-primary)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "8px",
-                  color: "var(--text-primary)",
-                  padding: "0.625rem 0.875rem",
-                  fontSize: "0.9rem",
-                  outline: "none",
-                  boxSizing: "border-box",
-                }}
-                onFocus={(e) => (e.target.style.borderColor = "var(--accent-green)")}
-                onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
+                className="w-full bg-[var(--bg-primary)] border border-[var(--border)] focus:border-[var(--accent-green)] rounded-lg text-[var(--text-primary)] px-3.5 py-2.5 text-[0.9rem] outline-none box-border"
               />
             </div>
 
             {/* Password */}
             <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
-                <label style={{ color: "var(--text-secondary)", fontSize: "0.85rem", fontWeight: 500 }}>
-                  Mot de passe
-                </label>
-                <Link href="/auth/reset-password" style={{ color: "var(--accent-blue)", fontSize: "0.78rem", textDecoration: "none" }}>
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="text-sm font-medium text-[var(--text-secondary)]">Mot de passe</label>
+                <Link href="/auth/reset-password" className="text-[var(--accent-blue)] text-[0.78rem] no-underline hover:underline">
                   Mot de passe oublié ?
                 </Link>
               </div>
-              <div style={{ position: "relative" }}>
+              <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
                   placeholder="••••••••"
-                  style={{
-                    width: "100%",
-                    background: "var(--bg-primary)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "8px",
-                    color: "var(--text-primary)",
-                    padding: "0.625rem 2.5rem 0.625rem 0.875rem",
-                    fontSize: "0.9rem",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                  onFocus={(e) => (e.target.style.borderColor = "var(--accent-green)")}
-                  onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
+                  className="w-full bg-[var(--bg-primary)] border border-[var(--border)] focus:border-[var(--accent-green)] rounded-lg text-[var(--text-primary)] pl-3.5 pr-10 py-2.5 text-[0.9rem] outline-none box-border"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: "absolute",
-                    right: "0.75rem",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    background: "none",
-                    border: "none",
-                    color: "var(--text-muted)",
-                    cursor: "pointer",
-                    fontSize: "0.9rem",
-                    padding: 0,
-                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent border-none text-[var(--text-muted)] cursor-pointer text-sm p-0"
                 >
                   {showPassword ? "🙈" : "👁️"}
                 </button>
@@ -133,43 +84,32 @@ export default function LoginPage() {
             </div>
 
             {/* Remember me */}
-            <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
+            <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={form.remember}
                 onChange={(e) => setForm({ ...form, remember: e.target.checked })}
-                style={{ accentColor: "var(--accent-green)", width: "16px", height: "16px" }}
+                className="accent-[var(--accent-green)] w-4 h-4"
               />
-              <span style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>Se souvenir de moi</span>
+              <span className="text-sm text-[var(--text-secondary)]">Se souvenir de moi</span>
             </label>
 
             {/* Submit */}
             <button
-              type="submit"
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                borderRadius: "8px",
-                border: "none",
-                background: "var(--accent-green)",
-                color: "#000",
-                fontWeight: 700,
-                fontSize: "0.95rem",
-                cursor: "pointer",
-                transition: "opacity 0.15s",
-              }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.opacity = "0.9")}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.opacity = "1")}
+              type="button"
+              disabled={loading}
+              onClick={handleSubmit}
+              className="w-full py-3 rounded-lg border-none font-bold text-[0.95rem] cursor-pointer transition-opacity disabled:opacity-50 disabled:cursor-not-allowed bg-[var(--accent-green)] text-black"
             >
-              Se connecter
+              {loading ? "Connexion..." : "Se connecter"}
             </button>
           </div>
         </div>
 
         {/* Register link */}
-        <p style={{ textAlign: "center", color: "var(--text-muted)", fontSize: "0.85rem", marginTop: "1.25rem" }}>
+        <p className="text-center text-sm text-[var(--text-muted)] mt-5">
           Pas encore de compte ?{" "}
-          <Link href="/auth/register" style={{ color: "var(--accent-green)", fontWeight: 600, textDecoration: "none" }}>
+          <Link href="/auth/register" className="text-[var(--accent-green)] font-semibold no-underline hover:underline">
             S&apos;inscrire gratuitement
           </Link>
         </p>

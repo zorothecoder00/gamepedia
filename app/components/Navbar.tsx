@@ -17,81 +17,32 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <nav
-      style={{
-        background: "var(--bg-secondary)",
-        borderBottom: "1px solid var(--border)",
-        position: "sticky",
-        top: 0,
-        zIndex: 50,
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "1280px",
-          margin: "0 auto",
-          padding: "0 1.5rem",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          height: "60px",
-        }}
-      >
+    <nav className="bg-[var(--bg-secondary)] border-b border-[var(--border)] sticky top-0 z-50">
+      <div className="max-w-[1280px] mx-auto px-6 flex items-center justify-between h-[60px]">
+
         {/* Logo */}
-        <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <span
-            style={{
-              background: "linear-gradient(135deg, var(--accent-green), var(--accent-blue))",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-              fontWeight: 900,
-              fontSize: "1.25rem",
-              letterSpacing: "-0.5px",
-            }}
-          >
+        <Link href="/" className="no-underline flex items-center gap-2">
+          <span className="bg-gradient-to-br from-[var(--accent-green)] to-[var(--accent-blue)] bg-clip-text text-transparent font-black text-xl tracking-tight">
             GamePedia
           </span>
-          <span
-            style={{
-              background: "var(--accent-gold)",
-              color: "#000",
-              fontSize: "0.65rem",
-              fontWeight: 700,
-              padding: "1px 5px",
-              borderRadius: "3px",
-              letterSpacing: "0.5px",
-            }}
-          >
+          <span className="bg-[var(--accent-gold)] text-black text-[0.65rem] font-bold px-[5px] py-px rounded-[3px] tracking-wide">
             TG
           </span>
         </Link>
 
         {/* Desktop nav links */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.25rem",
-          }}
-          className="desktop-nav"
-        >
+        <div className="hidden md:flex items-center gap-1">
           {navLinks.map((link) => {
             const active = pathname === link.href || pathname.startsWith(link.href + "/");
             return (
               <Link
                 key={link.href}
                 href={link.href}
-                style={{
-                  padding: "0.375rem 0.75rem",
-                  borderRadius: "6px",
-                  fontSize: "0.875rem",
-                  fontWeight: active ? 600 : 400,
-                  color: active ? "var(--accent-green)" : "var(--text-secondary)",
-                  textDecoration: "none",
-                  background: active ? "rgba(0, 230, 118, 0.08)" : "transparent",
-                  transition: "all 0.15s",
-                }}
+                className={`px-3 py-1.5 rounded-md text-sm no-underline transition-all ${
+                  active
+                    ? "font-semibold text-[var(--accent-green)] bg-[rgba(0,230,118,0.08)]"
+                    : "font-normal text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                }`}
               >
                 {link.label}
               </Link>
@@ -100,48 +51,24 @@ export default function Navbar() {
         </div>
 
         {/* Actions */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <div className="flex items-center gap-2">
           <Link
             href="/auth/login"
-            style={{
-              padding: "0.375rem 0.875rem",
-              borderRadius: "6px",
-              fontSize: "0.875rem",
-              fontWeight: 500,
-              color: "var(--text-secondary)",
-              textDecoration: "none",
-              border: "1px solid var(--border)",
-            }}
+            className="hidden md:inline-flex px-3.5 py-1.5 rounded-md text-sm font-medium text-[var(--text-secondary)] no-underline border border-[var(--border)] hover:text-[var(--text-primary)] transition-colors"
           >
             Connexion
           </Link>
           <Link
             href="/auth/register"
-            style={{
-              padding: "0.375rem 0.875rem",
-              borderRadius: "6px",
-              fontSize: "0.875rem",
-              fontWeight: 600,
-              color: "#000",
-              textDecoration: "none",
-              background: "var(--accent-green)",
-            }}
+            className="hidden md:inline-flex px-3.5 py-1.5 rounded-md text-sm font-semibold text-black no-underline bg-[var(--accent-green)] hover:opacity-90 transition-opacity"
           >
             S&apos;inscrire
           </Link>
 
-          {/* Hamburger mobile */}
+          {/* Hamburger */}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            style={{
-              display: "none",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--text-primary)",
-              padding: "0.25rem",
-            }}
-            className="hamburger"
+            className="md:hidden bg-transparent border-none cursor-pointer text-[var(--text-primary)] p-1"
             aria-label="Menu"
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -161,16 +88,7 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div
-          style={{
-            background: "var(--bg-secondary)",
-            borderTop: "1px solid var(--border)",
-            padding: "1rem 1.5rem",
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.25rem",
-          }}
-        >
+        <div className="md:hidden bg-[var(--bg-secondary)] border-t border-[var(--border)] px-6 py-4 flex flex-col gap-1">
           {navLinks.map((link) => {
             const active = pathname === link.href || pathname.startsWith(link.href + "/");
             return (
@@ -178,29 +96,26 @@ export default function Navbar() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setMenuOpen(false)}
-                style={{
-                  padding: "0.5rem 0.75rem",
-                  borderRadius: "6px",
-                  fontSize: "0.9rem",
-                  fontWeight: active ? 600 : 400,
-                  color: active ? "var(--accent-green)" : "var(--text-secondary)",
-                  textDecoration: "none",
-                  background: active ? "rgba(0, 230, 118, 0.08)" : "transparent",
-                }}
+                className={`px-3 py-2 rounded-md text-[0.9rem] no-underline ${
+                  active
+                    ? "font-semibold text-[var(--accent-green)] bg-[rgba(0,230,118,0.08)]"
+                    : "font-normal text-[var(--text-secondary)]"
+                }`}
               >
                 {link.label}
               </Link>
             );
           })}
+          <div className="flex gap-2 mt-3 pt-3 border-t border-[var(--border)]">
+            <Link href="/auth/login" className="flex-1 text-center py-2 rounded-md text-sm font-medium text-[var(--text-secondary)] no-underline border border-[var(--border)]">
+              Connexion
+            </Link>
+            <Link href="/auth/register" className="flex-1 text-center py-2 rounded-md text-sm font-semibold text-black no-underline bg-[var(--accent-green)]">
+              S&apos;inscrire
+            </Link>
+          </div>
         </div>
       )}
-
-      <style>{`
-        @media (max-width: 768px) {
-          .desktop-nav { display: none !important; }
-          .hamburger { display: block !important; }
-        }
-      `}</style>
     </nav>
   );
 }

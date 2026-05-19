@@ -13,7 +13,6 @@ export async function GET(_request: NextRequest, { params }: Params) {
         stage: { include: { tournament: { select: { name: true, slug: true } } } },
         participants: {
           include: {
-            player: { select: { pseudo: true } },
             team: { select: { name: true, tag: true } },
           },
         },

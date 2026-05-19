@@ -15,7 +15,6 @@ export async function GET(_request: NextRequest, { params }: Params) {
       include: {
         player: { select: { pseudo: true } },
         team: { select: { name: true, tag: true } },
-        pointRule: true,
       },
     });
 

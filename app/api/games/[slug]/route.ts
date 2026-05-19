@@ -9,7 +9,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
     const { slug } = await params;
     const game = await db.game.findUnique({
       where: { slug },
-      include: { _count: { select: { playerProfiles: true, tournaments: true } } },
+      include: { _count: { select: { playerProfiles: true, tournamentGames: true } } },
     });
     if (!game) return notFound("Jeu introuvable");
     return ok(game);

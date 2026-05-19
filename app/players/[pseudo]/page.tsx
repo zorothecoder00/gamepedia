@@ -3,170 +3,112 @@ import { useState } from "react";
 import Link from "next/link";
 import TierBadge from "../../components/TierBadge";
 import GameTag from "../../components/GameTag";
+import { useApi } from "@/hooks/useApi";
 
-const demoPlayer = {
-  pseudo: "Phantom_TG",
-  firstName: "Kofi",
-  lastName: "Mensah",
-  city: "Lomé",
-  region: "Maritime",
-  bio: "Joueur professionnel Valorant & Free Fire. Capitaine de l'équipe TGO Esports. Passionné de gaming depuis 2018.",
-  isVerified: true,
-  isActive: true,
-  nationality: "TG",
-  games: [
-    { name: "Valorant", rank: "Platinum 2", inGameName: "Phantom#TG01" },
-    { name: "Free Fire", rank: "Diamond", inGameName: "PhantomTG" },
-  ],
-  team: { name: "TGO Esports", slug: "tgo-esports", tag: "TGO" },
-  stats: {
-    totalPoints: 2850,
-    tournamentsPlayed: 14,
-    wins: 4,
-    top3: 8,
-    prizeMoney: 450000,
-  },
-  socialLinks: {
-    twitter: "@PhantomTG",
-    discord: "Phantom#1234",
-    youtube: "PhantomTGYT",
-  },
+interface Player {
+  pseudo: string; firstName?: string; lastName?: string;
+  city?: string; region?: string; bio?: string;
+  isVerified?: boolean; avatarUrl?: string;
+  gameProfiles: { game: { name: string; slug: string }; inGameName?: string; rank?: string }[];
+  teamMembers: { team: { id: string; name: string; tag: string; slug: string } }[];
+  achievements: { achievement: { name: string; description: string; icon?: string; rarity: string; category: string } }[];
+}
+
+interface TournamentParticipation {
+  id: string; finalPlacement?: number; prizeWon?: number;
+  tournament: { name: string; slug: string; tier: "S" | "A" | "B" | "C"; status: string; startDate: string };
+}
+
+const TABS = ["Profil", "Palmarès", "Historique", "Achievements"];
+
+const RARITY_COLORS: Record<string, string> = {
+  Commun: "var(--text-muted)", Rare: "var(--accent-blue)",
+  Épique: "var(--tier-a)", Légendaire: "var(--accent-gold)",
 };
 
-const demoPalmares = [
-  { tournament: "Valorant Cup Lomé 2025", placement: 1, tier: "A" as const, prizeWon: 150000, date: "2025-03-20" },
-  { tournament: "National Championship 2024", placement: 2, tier: "S" as const, prizeWon: 200000, date: "2024-11-15" },
-  { tournament: "Qualifier Q3 2024", placement: 1, tier: "C" as const, prizeWon: 50000, date: "2024-09-05" },
-  { tournament: "Community Cup 2024", placement: 3, tier: "B" as const, prizeWon: 50000, date: "2024-07-12" },
-];
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-7">
+      <h3 className="font-bold text-[0.95rem] text-[var(--text-primary)] mb-3.5 pb-2 border-b border-[var(--border)]">{title}</h3>
+      {children}
+    </div>
+  );
+}
 
-const demoAchievements = [
-  { name: "Premier Titre", description: "Gagner un tournoi", icon: "🏆", rarity: "Rare", category: "Palmares" },
-  { name: "Hat-trick", description: "Gagner 3 tournois", icon: "🎯", rarity: "Épique", category: "Palmares" },
-  { name: "Vétéran", description: "Participer à 10 tournois", icon: "⚔️", rarity: "Commun", category: "Participation" },
-  { name: "Joueur Vérifié", description: "Compte vérifié par l'admin", icon: "✅", rarity: "Commun", category: "Special" },
-];
-
-const tabs = ["Profil", "Palmarès", "Historique", "Achievements"];
-
-const rarityColors: Record<string, string> = {
-  Commun: "var(--text-muted)",
-  Rare: "var(--accent-blue)",
-  Épique: "var(--tier-a)",
-  Légendaire: "var(--accent-gold)",
-};
+const placementIcon = (p?: number) => p === 1 ? "🥇" : p === 2 ? "🥈" : p === 3 ? "🥉" : p ? `#${p}` : "—";
 
 export default function PlayerPage({ params }: { params: { pseudo: string } }) {
   const [activeTab, setActiveTab] = useState(0);
-  const player = demoPlayer;
+  const { pseudo } = params;
 
-  const placementIcon = (p: number) => p === 1 ? "🥇" : p === 2 ? "🥈" : p === 3 ? "🥉" : `#${p}`;
+  const { data: player, loading: loadingPlayer } = useApi<Player>(`/api/players/${pseudo}`);
+  const { data: participations, loading: loadingParticipations } = useApi<TournamentParticipation[]>(
+    activeTab >= 1 ? `/api/players/${pseudo}/tournaments` : null, [activeTab],
+  );
+
+  if (loadingPlayer) {
+    return <div className="max-w-[1280px] mx-auto my-16 text-center text-[var(--text-muted)]">Chargement...</div>;
+  }
+  if (!player) {
+    return <div className="max-w-[1280px] mx-auto my-16 text-center text-[var(--text-muted)]">Joueur introuvable.</div>;
+  }
+
+  const team = player.teamMembers?.[0]?.team;
+  const palmares = (participations ?? []).filter((p) => p.finalPlacement && p.finalPlacement <= 10);
 
   return (
     <div>
       {/* Banner */}
-      <div
-        style={{
-          height: "160px",
-          background: "linear-gradient(135deg, #1a1a35, #0d0d20)",
-          position: "relative",
-          borderBottom: "1px solid var(--border)",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: "linear-gradient(135deg, rgba(0,230,118,0.1), rgba(79,195,247,0.05))",
-          }}
-        />
+      <div className="h-40 relative border-b border-[var(--border)] bg-gradient-to-br from-[#1a1a35] to-[#0d0d20]">
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(0,230,118,0.1),rgba(79,195,247,0.05))]" />
       </div>
 
       {/* Profile header */}
-      <div style={{ background: "var(--bg-secondary)", borderBottom: "1px solid var(--border)" }}>
-        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 1.5rem" }}>
-          <div style={{ display: "flex", alignItems: "flex-end", gap: "1.25rem", marginTop: "-40px", paddingBottom: "1.25rem", flexWrap: "wrap" }}>
+      <div className="bg-[var(--bg-secondary)] border-b border-[var(--border)]">
+        <div className="max-w-[1280px] mx-auto px-6">
+          <div className="flex items-end gap-5 -mt-10 pb-5 flex-wrap">
             {/* Avatar */}
             <div
-              style={{
-                width: "80px",
-                height: "80px",
-                borderRadius: "50%",
-                background: "linear-gradient(135deg, var(--accent-green), var(--accent-blue))",
-                border: "3px solid var(--bg-secondary)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#000",
-                fontWeight: 800,
-                fontSize: "1.75rem",
-                flexShrink: 0,
-              }}
+              className={`w-20 h-20 rounded-full flex items-center justify-center text-black font-black text-[1.75rem] shrink-0 border-[3px] border-[var(--bg-secondary)] ${!player.avatarUrl ? "bg-gradient-to-br from-[var(--accent-green)] to-[var(--accent-blue)]" : ""}`}
+              style={player.avatarUrl ? { background: `url(${player.avatarUrl}) center/cover` } : undefined}
             >
-              {player.pseudo.slice(0, 2).toUpperCase()}
+              {!player.avatarUrl && player.pseudo.slice(0, 2).toUpperCase()}
             </div>
 
             {/* Info */}
-            <div style={{ flex: 1, paddingTop: "2.5rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-                <h1 style={{ color: "var(--text-primary)", fontSize: "1.5rem", fontWeight: 800 }}>
-                  {player.pseudo}
-                </h1>
-                {player.isVerified && (
-                  <span title="Joueur vérifié" style={{ color: "var(--accent-blue)", fontSize: "1.1rem" }}>✓</span>
-                )}
-                <span style={{ fontSize: "1.25rem" }}>🇹🇬</span>
+            <div className="flex-1 pt-10">
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <h1 className="text-2xl font-black text-[var(--text-primary)]">{player.pseudo}</h1>
+                {player.isVerified && <span className="text-[var(--accent-blue)] text-lg" title="Joueur vérifié">✓</span>}
+                <span className="text-xl">🇹🇬</span>
               </div>
-              <div style={{ color: "var(--text-muted)", fontSize: "0.83rem", marginBottom: "0.5rem" }}>
-                {player.firstName} {player.lastName} · {player.city}, {player.region}
-              </div>
-              <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-                {player.games.map((g) => <GameTag key={g.name} name={g.name} />)}
-                {player.team && (
-                  <Link href={`/teams/${player.team.slug}`} style={{ textDecoration: "none" }}>
-                    <span
-                      style={{
-                        background: "rgba(255, 215, 0, 0.12)",
-                        color: "var(--accent-gold)",
-                        border: "1px solid rgba(255,215,0,0.25)",
-                        borderRadius: "4px",
-                        fontSize: "0.7rem",
-                        fontWeight: 700,
-                        padding: "1px 7px",
-                      }}
-                    >
-                      [{player.team.tag}] {player.team.name}
+              {(player.firstName || player.city) && (
+                <div className="text-[0.83rem] text-[var(--text-muted)] mb-2">
+                  {[player.firstName, player.lastName].filter(Boolean).join(" ")}
+                  {player.city && ` · ${player.city}`}
+                  {player.region && `, ${player.region}`}
+                </div>
+              )}
+              <div className="flex gap-1.5 flex-wrap">
+                {player.gameProfiles.map((gp) => <GameTag key={gp.game.slug} name={gp.game.name} />)}
+                {team && (
+                  <Link href={`/teams/${team.slug}`} className="no-underline">
+                    <span className="text-[0.7rem] font-bold px-1.5 py-0.5 rounded bg-[rgba(255,215,0,0.12)] text-[var(--accent-gold)] border border-[rgba(255,215,0,0.25)]">
+                      [{team.tag}] {team.name}
                     </span>
                   </Link>
                 )}
               </div>
             </div>
-
-            {/* Stats globales */}
-            <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", paddingTop: "2rem" }}>
-              <StatBubble label="Points" value={player.stats.totalPoints.toLocaleString()} color="var(--accent-gold)" />
-              <StatBubble label="Tournois" value={player.stats.tournamentsPlayed} color="var(--accent-blue)" />
-              <StatBubble label="Victoires" value={player.stats.wins} color="var(--accent-green)" />
-              <StatBubble label="Prize Money" value={`${player.stats.prizeMoney.toLocaleString()} XOF`} color="var(--accent-gold)" />
-            </div>
           </div>
 
           {/* Tabs */}
-          <div style={{ display: "flex", gap: "0" }}>
-            {tabs.map((tab, i) => (
+          <div className="flex">
+            {TABS.map((tab, i) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(i)}
-                style={{
-                  padding: "0.75rem 1.125rem",
-                  background: "none",
-                  border: "none",
-                  borderBottom: activeTab === i ? "2px solid var(--accent-green)" : "2px solid transparent",
-                  color: activeTab === i ? "var(--accent-green)" : "var(--text-secondary)",
-                  fontWeight: activeTab === i ? 600 : 400,
-                  fontSize: "0.88rem",
-                  cursor: "pointer",
-                }}
+                className={`px-[1.125rem] py-3 bg-transparent border-none text-sm cursor-pointer transition-colors border-b-2 ${activeTab === i ? "border-[var(--accent-green)] text-[var(--accent-green)] font-semibold" : "border-transparent text-[var(--text-secondary)] font-normal"}`}
               >
                 {tab}
               </button>
@@ -176,268 +118,141 @@ export default function PlayerPage({ params }: { params: { pseudo: string } }) {
       </div>
 
       {/* Tab content */}
-      <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "2rem 1.5rem" }}>
-        {/* Profile tab */}
+      <div className="max-w-[1280px] mx-auto px-6 py-8">
+
+        {/* Profil */}
         {activeTab === 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "2rem" }}>
+          <div className="grid [grid-template-columns:2fr_1fr] gap-8">
             <div>
               <Section title="Biographie">
-                <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", lineHeight: 1.7 }}>
-                  {player.bio}
-                </p>
+                <p className="text-[0.9rem] text-[var(--text-secondary)] leading-[1.7]">{player.bio ?? "Aucune biographie renseignée."}</p>
               </Section>
               <Section title="Profils in-game">
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                  {player.games.map((g) => (
-                    <div
-                      key={g.name}
-                      style={{
-                        background: "var(--bg-primary)",
-                        border: "1px solid var(--border)",
-                        borderRadius: "8px",
-                        padding: "0.875rem 1rem",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
+                <div className="flex flex-col gap-3">
+                  {player.gameProfiles.map((gp) => (
+                    <div key={gp.game.slug} className="bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg px-4 py-3.5 flex justify-between items-center">
                       <div>
-                        <div style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: "0.88rem" }}>{g.name}</div>
-                        <div style={{ color: "var(--text-muted)", fontSize: "0.78rem" }}>{g.inGameName}</div>
+                        <div className="font-semibold text-sm text-[var(--text-primary)]">{gp.game.name}</div>
+                        {gp.inGameName && <div className="text-[0.78rem] text-[var(--text-muted)]">{gp.inGameName}</div>}
                       </div>
-                      <span
-                        style={{
-                          background: "rgba(79,195,247,0.1)",
-                          color: "var(--accent-blue)",
-                          border: "1px solid rgba(79,195,247,0.25)",
-                          borderRadius: "4px",
-                          fontSize: "0.75rem",
-                          fontWeight: 600,
-                          padding: "2px 8px",
-                        }}
-                      >
-                        {g.rank}
-                      </span>
+                      {gp.rank && (
+                        <span className="bg-[rgba(79,195,247,0.1)] text-[var(--accent-blue)] border border-[rgba(79,195,247,0.25)] rounded px-2 py-0.5 text-[0.75rem] font-semibold">
+                          {gp.rank}
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
               </Section>
             </div>
-
             <div>
-              <Section title="Réseaux sociaux">
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  {Object.entries(player.socialLinks).map(([key, val]) => (
-                    <div key={key} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <span style={{ color: "var(--text-muted)", fontSize: "0.8rem", width: "60px", textTransform: "capitalize" }}>{key}</span>
-                      <span style={{ color: "var(--accent-blue)", fontSize: "0.82rem" }}>{val}</span>
-                    </div>
-                  ))}
-                </div>
-              </Section>
               <Section title="Équipe actuelle">
-                {player.team ? (
-                  <Link href={`/teams/${player.team.slug}`} style={{ textDecoration: "none" }}>
-                    <div
-                      style={{
-                        background: "var(--bg-primary)",
-                        border: "1px solid var(--border)",
-                        borderRadius: "8px",
-                        padding: "0.875rem 1rem",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.75rem",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: "36px",
-                          height: "36px",
-                          borderRadius: "6px",
-                          background: "rgba(255,215,0,0.15)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "var(--accent-gold)",
-                          fontWeight: 800,
-                          fontSize: "0.8rem",
-                        }}
-                      >
-                        {player.team.tag}
+                {team ? (
+                  <Link href={`/teams/${team.slug}`} className="no-underline">
+                    <div className="bg-[var(--bg-primary)] border border-[var(--border)] rounded-lg px-4 py-3.5 flex items-center gap-3 hover:border-[var(--border-bright)] transition-colors">
+                      <div className="w-9 h-9 rounded-lg bg-[rgba(255,215,0,0.15)] flex items-center justify-center text-[var(--accent-gold)] font-black text-xs">
+                        {team.tag}
                       </div>
                       <div>
-                        <div style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: "0.88rem" }}>{player.team.name}</div>
-                        <div style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>Membre actif</div>
+                        <div className="font-semibold text-sm text-[var(--text-primary)]">{team.name}</div>
+                        <div className="text-[0.75rem] text-[var(--text-muted)]">Membre actif</div>
                       </div>
                     </div>
                   </Link>
                 ) : (
-                  <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Sans équipe</p>
+                  <p className="text-sm text-[var(--text-muted)]">Sans équipe</p>
                 )}
               </Section>
             </div>
           </div>
         )}
 
-        {/* Palmarès tab */}
+        {/* Palmarès */}
         {activeTab === 1 && (
           <div>
-            <h2 style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: "1.1rem", marginBottom: "1.25rem" }}>
-              Palmarès — {demoPalmares.length} résultats
+            <h2 className="font-bold text-[1.1rem] text-[var(--text-primary)] mb-5">
+              Palmarès — {loadingParticipations ? "..." : palmares.length} résultats
             </h2>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-              {demoPalmares.map((entry, i) => (
-                <div
-                  key={i}
-                  style={{
-                    background: "var(--bg-card)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "8px",
-                    padding: "1rem 1.25rem",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "1rem",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <span style={{ fontSize: "1.5rem", minWidth: "2rem" }}>{placementIcon(entry.placement)}</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: "0.9rem" }}>{entry.tournament}</div>
-                    <div style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>
-                      {new Date(entry.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+            {loadingParticipations ? <p className="text-[var(--text-muted)]">Chargement...</p>
+              : palmares.length === 0 ? <p className="text-[var(--text-muted)]">Aucun palmarès.</p>
+              : (
+                <div className="flex flex-col gap-3">
+                  {palmares.map((entry) => (
+                    <div key={entry.id} className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg px-5 py-4 flex items-center gap-4 flex-wrap">
+                      <span className="text-2xl min-w-8">{placementIcon(entry.finalPlacement)}</span>
+                      <div className="flex-1">
+                        <div className="font-semibold text-[0.9rem] text-[var(--text-primary)]">{entry.tournament.name}</div>
+                        <div className="text-[0.75rem] text-[var(--text-muted)]">
+                          {new Date(entry.tournament.startDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+                        </div>
+                      </div>
+                      <TierBadge tier={entry.tournament.tier} small />
+                      {entry.prizeWon && entry.prizeWon > 0 && (
+                        <span className="font-bold text-sm text-[var(--accent-gold)]">+{entry.prizeWon.toLocaleString()} XOF</span>
+                      )}
                     </div>
-                  </div>
-                  <TierBadge tier={entry.tier} small />
-                  {entry.prizeWon > 0 && (
-                    <span style={{ color: "var(--accent-gold)", fontWeight: 700, fontSize: "0.88rem" }}>
-                      +{entry.prizeWon.toLocaleString()} XOF
-                    </span>
-                  )}
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
           </div>
         )}
 
-        {/* Historique tab */}
+        {/* Historique */}
         {activeTab === 2 && (
           <div>
-            <h2 style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: "1.1rem", marginBottom: "1.25rem" }}>
-              Historique des participations
-            </h2>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              {demoPalmares.map((entry, i) => (
-                <div
-                  key={i}
-                  style={{
-                    background: "var(--bg-card)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "8px",
-                    padding: "0.875rem 1.25rem",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: "1rem",
-                  }}
-                >
-                  <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-                    <span style={{ color: "var(--text-muted)", fontSize: "0.8rem", minWidth: "80px" }}>
-                      {new Date(entry.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
-                    </span>
-                    <span style={{ color: "var(--text-primary)", fontSize: "0.88rem", fontWeight: 500 }}>{entry.tournament}</span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                    <TierBadge tier={entry.tier} small />
-                    <span style={{ fontSize: "1.1rem" }}>{placementIcon(entry.placement)}</span>
-                    <span style={{ color: "var(--text-muted)", fontSize: "0.78rem" }}>
-                      {entry.placement === 1 ? "Champion" : entry.placement === 2 ? "Finaliste" : entry.placement === 3 ? "3e place" : `${entry.placement}e place`}
-                    </span>
-                  </div>
+            <h2 className="font-bold text-[1.1rem] text-[var(--text-primary)] mb-5">Historique des participations</h2>
+            {loadingParticipations ? <p className="text-[var(--text-muted)]">Chargement...</p>
+              : !participations || participations.length === 0 ? <p className="text-[var(--text-muted)]">Aucune participation.</p>
+              : (
+                <div className="flex flex-col gap-2">
+                  {participations.map((entry) => (
+                    <div key={entry.id} className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg px-5 py-3.5 flex items-center justify-between gap-4">
+                      <div className="flex gap-3 items-center">
+                        <span className="text-[0.8rem] text-[var(--text-muted)] min-w-[80px]">
+                          {new Date(entry.tournament.startDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                        </span>
+                        <Link href={`/tournaments/${entry.tournament.slug}`} className="text-sm font-medium text-[var(--text-primary)] no-underline hover:underline">
+                          {entry.tournament.name}
+                        </Link>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <TierBadge tier={entry.tournament.tier} small />
+                        <span className="text-lg">{placementIcon(entry.finalPlacement)}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
           </div>
         )}
 
-        {/* Achievements tab */}
+        {/* Achievements */}
         {activeTab === 3 && (
           <div>
-            <h2 style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: "1.1rem", marginBottom: "1.25rem" }}>
-              Achievements — {demoAchievements.length} débloqués
+            <h2 className="font-bold text-[1.1rem] text-[var(--text-primary)] mb-5">
+              Achievements — {player.achievements.length} débloqués
             </h2>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-                gap: "1rem",
-              }}
-            >
-              {demoAchievements.map((ach) => (
-                <div
-                  key={ach.name}
-                  style={{
-                    background: "var(--bg-card)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "10px",
-                    padding: "1.25rem",
-                    display: "flex",
-                    gap: "0.875rem",
-                    alignItems: "flex-start",
-                  }}
-                >
-                  <span style={{ fontSize: "2rem" }}>{ach.icon}</span>
-                  <div>
-                    <div style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: "0.9rem", marginBottom: "0.25rem" }}>
-                      {ach.name}
+            {player.achievements.length === 0 ? (
+              <p className="text-[var(--text-muted)]">Aucun achievement débloqué.</p>
+            ) : (
+              <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
+                {player.achievements.map(({ achievement: ach }) => (
+                  <div key={ach.name} className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-5 flex gap-3.5 items-start">
+                    <span className="text-3xl">{ach.icon ?? "🏅"}</span>
+                    <div>
+                      <div className="font-semibold text-[0.9rem] text-[var(--text-primary)] mb-1">{ach.name}</div>
+                      <div className="text-[0.78rem] text-[var(--text-muted)] mb-2">{ach.description}</div>
+                      <span className="text-[0.68rem] font-semibold" style={{ color: RARITY_COLORS[ach.rarity] ?? "var(--text-muted)" }}>
+                        {ach.rarity}
+                      </span>
                     </div>
-                    <div style={{ color: "var(--text-muted)", fontSize: "0.78rem", marginBottom: "0.5rem" }}>
-                      {ach.description}
-                    </div>
-                    <span
-                      style={{
-                        fontSize: "0.68rem",
-                        fontWeight: 600,
-                        color: rarityColors[ach.rarity] ?? "var(--text-muted)",
-                      }}
-                    >
-                      {ach.rarity}
-                    </span>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function StatBubble({ label, value, color }: { label: string; value: string | number; color: string }) {
-  return (
-    <div style={{ textAlign: "center" }}>
-      <div style={{ color, fontWeight: 700, fontSize: "1.1rem" }}>{value}</div>
-      <div style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>{label}</div>
-    </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ marginBottom: "1.75rem" }}>
-      <h3
-        style={{
-          color: "var(--text-primary)",
-          fontWeight: 700,
-          fontSize: "0.95rem",
-          marginBottom: "0.875rem",
-          paddingBottom: "0.5rem",
-          borderBottom: "1px solid var(--border)",
-        }}
-      >
-        {title}
-      </h3>
-      {children}
     </div>
   );
 }

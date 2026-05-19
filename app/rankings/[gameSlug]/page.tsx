@@ -1,211 +1,171 @@
+"use client";
+import { useState } from "react";
 import Link from "next/link";
+import { useApi } from "@/hooks/useApi";
 
-const gamesData: Record<string, { name: string; logo: string; color: string }> = {
-  "valorant": { name: "Valorant", logo: "🎯", color: "#ff4655" },
-  "free-fire": { name: "Free Fire", logo: "🔥", color: "#ff9800" },
-  "fifa-25": { name: "FIFA 25", logo: "⚽", color: "#4caf50" },
-  "mobile-legends": { name: "Mobile Legends", logo: "⚔️", color: "#9c27b0" },
-};
+interface RankingEntry {
+  id: string; rank: number; points: number; wins: number;
+  top3?: number; tournamentsPlayed?: number; prizeMoney?: number; prevRank?: number;
+  player?: { pseudo: string; city?: string; isVerified?: boolean };
+  team?: { name: string; tag: string; slug: string };
+  season?: { name: string };
+}
 
-const demoRankings = [
-  { rank: 1, prevRank: 2, pseudo: "Phantom_TG", city: "Lomé", points: 2850, wins: 4, top3: 8, tournamentsPlayed: 14, prizeMoney: 450000, isVerified: true },
-  { rank: 2, prevRank: 1, pseudo: "ShadowKing", city: "Kara", points: 2400, wins: 3, top3: 6, tournamentsPlayed: 12, prizeMoney: 310000, isVerified: true },
-  { rank: 3, prevRank: 3, pseudo: "RapidStrike", city: "Lomé", points: 1700, wins: 1, top3: 4, tournamentsPlayed: 9, prizeMoney: 120000, isVerified: true },
-  { rank: 4, prevRank: 6, pseudo: "ThunderBolt", city: "Lomé", points: 1100, wins: 0, top3: 2, tournamentsPlayed: 7, prizeMoney: 45000, isVerified: false },
-  { rank: 5, prevRank: 5, pseudo: "IceBreaker", city: "Lomé", points: 950, wins: 0, top3: 1, tournamentsPlayed: 6, prizeMoney: 30000, isVerified: false },
-  { rank: 6, prevRank: 4, pseudo: "BlazeFire", city: "Atakpamé", points: 880, wins: 0, top3: 1, tournamentsPlayed: 5, prizeMoney: 20000, isVerified: false },
-  { rank: 7, prevRank: 7, pseudo: "NightWolf", city: "Lomé", points: 750, wins: 0, top3: 0, tournamentsPlayed: 4, prizeMoney: 0, isVerified: false },
-  { rank: 8, prevRank: 9, pseudo: "DragonSlayer", city: "Sokodé", points: 680, wins: 0, top3: 0, tournamentsPlayed: 3, prizeMoney: 0, isVerified: false },
-  { rank: 9, prevRank: 8, pseudo: "CobaltWave", city: "Lomé", points: 590, wins: 0, top3: 0, tournamentsPlayed: 3, prizeMoney: 0, isVerified: false },
-  { rank: 10, prevRank: 10, pseudo: "GoldenEagle", city: "Dapaong", points: 490, wins: 0, top3: 0, tournamentsPlayed: 2, prizeMoney: 0, isVerified: false },
-];
+interface Season { id: string; name: string; isActive: boolean }
+interface Game { name: string; slug: string; color?: string; logoUrl?: string }
 
-const seasons = ["Saison 1 · 2025", "Saison 2 · 2024", "Saison 1 · 2024"];
-
-function MovementBadge({ current, prev }: { current: number; prev: number }) {
+function MovementBadge({ current, prev }: { current: number; prev?: number }) {
+  if (!prev || prev === current) return <span className="text-[0.72rem] text-[var(--text-muted)]">—</span>;
   const diff = prev - current;
-  if (diff === 0) return <span style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>—</span>;
   const isUp = diff > 0;
   return (
-    <span style={{ color: isUp ? "var(--accent-green)" : "var(--accent-red)", fontSize: "0.72rem", fontWeight: 600 }}>
+    <span className={`text-[0.72rem] font-semibold ${isUp ? "text-[var(--accent-green)]" : "text-[var(--accent-red)]"}`}>
       {isUp ? "▲" : "▼"} {Math.abs(diff)}
     </span>
   );
 }
 
 export default function GameRankingPage({ params }: { params: { gameSlug: string } }) {
-  const game = gamesData[params.gameSlug] ?? { name: params.gameSlug, logo: "🎮", color: "var(--accent-blue)" };
+  const { gameSlug } = params;
+  const [seasonId, setSeasonId] = useState<string>("");
+  const [page, setPage] = useState(1);
+
+  const { data: gameData } = useApi<Game>(`/api/games/${gameSlug}`);
+  const { data: seasons } = useApi<Season[]>(`/api/rankings/${gameSlug}/seasons`);
+
+  const rankUrl = seasonId
+    ? `/api/rankings/${gameSlug}/${seasonId}?page=${page}`
+    : `/api/rankings/${gameSlug}?page=${page}`;
+
+  const { data: entries, meta, loading } = useApi<RankingEntry[]>(rankUrl, [gameSlug, seasonId, page]);
+
+  const game = gameData ?? { name: gameSlug, slug: gameSlug, color: "var(--accent-blue)" };
+  const color = game.color ?? "var(--accent-blue)";
+
+  const medalIcons = ["🥇", "🥈", "🥉"];
+  const medalColors = ["var(--accent-gold)", "#b0b0c0", "#cd7f32"];
 
   return (
-    <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "2rem 1.5rem" }}>
+    <div className="max-w-[1280px] mx-auto px-6 py-8">
       {/* Breadcrumb */}
-      <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", marginBottom: "1.25rem", fontSize: "0.8rem" }}>
-        <Link href="/rankings" style={{ color: "var(--text-muted)", textDecoration: "none" }}>Classements</Link>
-        <span style={{ color: "var(--border-bright)" }}>›</span>
-        <span style={{ color: "var(--text-secondary)" }}>{game.name}</span>
+      <div className="flex gap-1.5 items-center mb-5 text-[0.8rem]">
+        <Link href="/rankings" className="text-[var(--text-muted)] no-underline hover:text-[var(--text-secondary)]">Classements</Link>
+        <span className="text-[var(--border-bright)]">›</span>
+        <span className="text-[var(--text-secondary)]">{game.name}</span>
       </div>
 
       {/* Header */}
       <div
-        style={{
-          background: `linear-gradient(135deg, ${game.color}15, var(--bg-primary))`,
-          border: `1px solid ${game.color}33`,
-          borderRadius: "12px",
-          padding: "1.5rem",
-          marginBottom: "2rem",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: "1rem",
-        }}
+        className="rounded-xl p-6 mb-8 flex items-center justify-between flex-wrap gap-4"
+        style={{ background: `linear-gradient(135deg, ${color}15, var(--bg-primary))`, border: `1px solid ${color}33` }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <span style={{ fontSize: "2.5rem" }}>{game.logo}</span>
+        <div className="flex items-center gap-4">
+          {game.logoUrl
+            ? <img src={game.logoUrl} alt={game.name} className="w-10 h-10 object-contain" />
+            : <span className="text-[2.5rem]">🎮</span>}
           <div>
-            <h1 style={{ color: "var(--text-primary)", fontSize: "1.5rem", fontWeight: 800, marginBottom: "0.25rem" }}>
-              Classement {game.name}
-            </h1>
-            <p style={{ color: "var(--text-muted)", fontSize: "0.83rem" }}>
-              {demoRankings.length} joueurs classés · Saison 1 · 2025
+            <h1 className="text-2xl font-black text-[var(--text-primary)] mb-1">Classement {game.name}</h1>
+            <p className="text-[0.83rem] text-[var(--text-muted)]">
+              {loading ? "..." : `${meta?.total ?? 0} joueurs classés`}
+              {entries?.[0]?.season ? ` · ${entries[0].season.name}` : ""}
             </p>
           </div>
         </div>
-        <select
-          style={{
-            background: "var(--bg-card)",
-            border: "1px solid var(--border)",
-            borderRadius: "8px",
-            color: "var(--text-primary)",
-            padding: "0.5rem 1rem",
-            fontSize: "0.85rem",
-          }}
-        >
-          {seasons.map((s) => <option key={s}>{s}</option>)}
-        </select>
-      </div>
-
-      {/* Ranking table */}
-      <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: "12px", overflow: "hidden" }}>
-        {/* Table header */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "60px 40px 1fr 120px 70px 70px 70px 120px",
-            padding: "0.75rem 1rem",
-            borderBottom: "1px solid var(--border)",
-            background: "var(--bg-secondary)",
-            gap: "0.5rem",
-          }}
-        >
-          {["Rang", "Mvt", "Joueur", "Points", "Wins", "Top 3", "Tournois", "Prize Money"].map((h) => (
-            <div key={h} style={{ color: "var(--text-muted)", fontSize: "0.72rem", fontWeight: 600, letterSpacing: "0.5px", textTransform: "uppercase" }}>
-              {h}
-            </div>
-          ))}
-        </div>
-
-        {/* Rows */}
-        {demoRankings.map((entry, i) => (
-          <div
-            key={entry.pseudo}
-            style={{
-              display: "grid",
-              gridTemplateColumns: "60px 40px 1fr 120px 70px 70px 70px 120px",
-              padding: "0.875rem 1rem",
-              borderBottom: i < demoRankings.length - 1 ? "1px solid var(--border)" : "none",
-              gap: "0.5rem",
-              alignItems: "center",
-              background: entry.rank <= 3 ? `${["rgba(255,215,0,0.04)", "rgba(176,176,192,0.04)", "rgba(205,127,50,0.04)"][entry.rank - 1]}` : "transparent",
-            }}
+        {seasons && seasons.length > 0 && (
+          <select
+            value={seasonId}
+            onChange={(e) => { setSeasonId(e.target.value); setPage(1); }}
+            className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg text-[var(--text-primary)] px-4 py-2 text-sm outline-none"
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-              {entry.rank <= 3 ? (
-                <span style={{ fontSize: "1.2rem" }}>{["🥇", "🥈", "🥉"][entry.rank - 1]}</span>
-              ) : (
-                <span style={{ color: game.color, fontWeight: 700, fontSize: "0.9rem" }}>#{entry.rank}</span>
-              )}
-            </div>
-
-            <div>
-              <MovementBadge current={entry.rank} prev={entry.prevRank} />
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
-              <div
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "50%",
-                  background: `linear-gradient(135deg, ${game.color}, var(--accent-blue))`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#000",
-                  fontWeight: 700,
-                  fontSize: "0.68rem",
-                  flexShrink: 0,
-                }}
-              >
-                {entry.pseudo.slice(0, 2).toUpperCase()}
-              </div>
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                  <Link
-                    href={`/players/${entry.pseudo}`}
-                    style={{
-                      color: entry.rank <= 3 ? ["var(--accent-gold)", "#b0b0c0", "#cd7f32"][entry.rank - 1] : "var(--text-primary)",
-                      fontWeight: entry.rank <= 3 ? 700 : 500,
-                      fontSize: "0.88rem",
-                      textDecoration: "none",
-                    }}
-                  >
-                    {entry.pseudo}
-                  </Link>
-                  {entry.isVerified && <span style={{ color: "var(--accent-blue)", fontSize: "0.7rem" }}>✓</span>}
-                </div>
-                <div style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>{entry.city}</div>
-              </div>
-            </div>
-
-            <div style={{ color: "var(--accent-gold)", fontWeight: 700, fontSize: "0.9rem" }}>
-              {entry.points.toLocaleString()} pts
-            </div>
-
-            <div style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>{entry.wins}</div>
-
-            <div style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>{entry.top3}</div>
-
-            <div style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>{entry.tournamentsPlayed}</div>
-
-            <div style={{ color: entry.prizeMoney > 0 ? "var(--accent-green)" : "var(--text-muted)", fontSize: "0.8rem", fontWeight: entry.prizeMoney > 0 ? 600 : 400 }}>
-              {entry.prizeMoney > 0 ? `${entry.prizeMoney.toLocaleString()} XOF` : "—"}
-            </div>
-          </div>
-        ))}
+            <option value="">Saison active</option>
+            {seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        )}
       </div>
+
+      {/* Table */}
+      {loading ? (
+        <div className="text-center py-12 text-[var(--text-muted)]">Chargement...</div>
+      ) : !entries || entries.length === 0 ? (
+        <div className="text-center py-12 text-[var(--text-muted)]">Aucune entrée de classement.</div>
+      ) : (
+        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl overflow-hidden">
+          {/* Header row */}
+          <div className="grid [grid-template-columns:60px_40px_1fr_120px_70px_70px_70px_130px] bg-[var(--bg-secondary)] border-b border-[var(--border)] px-4 py-3 gap-2 text-[0.72rem] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+            {["Rang", "Mvt", "Joueur", "Points", "Wins", "Top 3", "Tournois", "Prize Money"].map((h) => (
+              <div key={h}>{h}</div>
+            ))}
+          </div>
+
+          {entries.map((entry, i) => {
+            const name = entry.player?.pseudo ?? entry.team?.name ?? "—";
+            const city = entry.player?.city ?? "";
+            const isVerified = entry.player?.isVerified;
+            const href = entry.player ? `/players/${entry.player.pseudo}` : `/teams/${entry.team?.slug ?? ""}`;
+
+            return (
+              <div
+                key={entry.id}
+                className={`grid [grid-template-columns:60px_40px_1fr_120px_70px_70px_70px_130px] px-4 py-3.5 gap-2 items-center ${i < entries.length - 1 ? "border-b border-[var(--border)]" : ""} ${entry.rank === 1 ? "bg-[rgba(255,215,0,0.04)]" : entry.rank === 2 ? "bg-[rgba(176,176,192,0.04)]" : entry.rank === 3 ? "bg-[rgba(205,127,50,0.04)]" : "bg-transparent"}`}
+              >
+                <div>
+                  {entry.rank <= 3
+                    ? <span className="text-xl">{medalIcons[entry.rank - 1]}</span>
+                    : <span className="font-bold text-[0.9rem]" style={{ color }}>#{entry.rank}</span>}
+                </div>
+                <div><MovementBadge current={entry.rank} prev={entry.prevRank} /></div>
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[0.68rem] shrink-0 text-black"
+                    style={{ background: `linear-gradient(135deg, ${color}, var(--accent-blue))` }}
+                  >
+                    {name.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1">
+                      <Link
+                        href={href}
+                        className={`no-underline text-sm hover:underline ${entry.rank === 1 ? "text-[var(--accent-gold)] font-bold" : entry.rank === 2 ? "text-[#b0b0c0] font-bold" : entry.rank === 3 ? "text-[#cd7f32] font-bold" : "text-[var(--text-primary)] font-medium"}`}
+                      >
+                        {name}
+                      </Link>
+                      {isVerified && <span className="text-[var(--accent-blue)] text-[0.7rem]">✓</span>}
+                    </div>
+                    {city && <div className="text-[0.72rem] text-[var(--text-muted)]">{city}</div>}
+                  </div>
+                </div>
+                <div className="font-bold text-[0.9rem] text-[var(--accent-gold)]">{entry.points.toLocaleString()} pts</div>
+                <div className="text-sm text-[var(--text-secondary)]">{entry.wins}</div>
+                <div className="text-sm text-[var(--text-secondary)]">{entry.top3 ?? "—"}</div>
+                <div className="text-sm text-[var(--text-secondary)]">{entry.tournamentsPlayed ?? "—"}</div>
+                <div className={`text-[0.8rem] ${entry.prizeMoney ? "text-[var(--accent-green)] font-semibold" : "text-[var(--text-muted)]"}`}>
+                  {entry.prizeMoney ? `${entry.prizeMoney.toLocaleString()} XOF` : "—"}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Pagination */}
-      <div style={{ display: "flex", justifyContent: "center", gap: "0.5rem", marginTop: "1.5rem" }}>
-        {[1, 2, 3].map((p) => (
-          <button
-            key={p}
-            style={{
-              width: "36px",
-              height: "36px",
-              borderRadius: "6px",
-              border: "1px solid var(--border)",
-              background: p === 1 ? game.color : "var(--bg-card)",
-              color: p === 1 ? "#000" : "var(--text-secondary)",
-              fontWeight: p === 1 ? 700 : 400,
-              fontSize: "0.88rem",
-              cursor: "pointer",
-            }}
-          >
-            {p}
-          </button>
-        ))}
-      </div>
+      {meta && meta.totalPages > 1 && (
+        <div className="flex justify-center gap-2 mt-6">
+          {Array.from({ length: meta.totalPages }, (_, i) => i + 1).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPage(p)}
+              className="w-9 h-9 rounded-lg border border-[var(--border)] text-sm cursor-pointer"
+              style={{
+                background: p === page ? color : "var(--bg-card)",
+                color: p === page ? "#000" : "var(--text-secondary)",
+                fontWeight: p === page ? 700 : 400,
+              }}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
