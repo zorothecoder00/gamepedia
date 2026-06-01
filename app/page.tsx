@@ -3,127 +3,38 @@
 // ============================================================
 
 import Link from "next/link";
+import { db } from "@/lib/prisma";
 
-// ─── Données de démo ─────────────────────────────────────────
+// ─── Métadonnées visuelles des jeux (couleur + icône) ────────
+// Ces infos ne sont pas en base : on les mappe par slug.
+const GAME_META: Record<string, { color: string; icon: string }> = {
+  "valorant":        { color: "#ff4655", icon: "🎯" },
+  "free-fire":       { color: "#ff8c00", icon: "🔥" },
+  "fifa-25":         { color: "#00b4d8", icon: "⚽" },
+  "mobile-legends":  { color: "#9b59b6", icon: "⚔️" },
+  "cs2":             { color: "#e3a04f", icon: "💥" },
+  "pubg-mobile":     { color: "#f5c518", icon: "🪖" },
+  "league-of-legends": { color: "#c89b3c", icon: "🧙" },
+};
+const DEFAULT_GAME_META = { color: "#00e676", icon: "🎮" };
+function getGameMeta(slug: string) {
+  return GAME_META[slug] ?? DEFAULT_GAME_META;
+}
 
-const STATS = [
-  { value: "248", label: "Joueurs inscrits" },
-  { value: "34", label: "Tournois organisés" },
-  { value: "8", label: "Jeux actifs" },
-  { value: "2.4M XOF", label: "Prize money distribué" },
-];
+// ─── Helpers de formatage ─────────────────────────────────────
+function fmtDate(date: Date | null | undefined): string {
+  if (!date) return "—";
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
 
-const GAMES = [
-  { name: "Valorant", slug: "valorant", genre: "FPS", players: 87, icon: "🎯", color: "#ff4655" },
-  { name: "Free Fire", slug: "free-fire", genre: "Battle Royale", players: 74, icon: "🔥", color: "#ff8c00" },
-  { name: "FIFA 25", slug: "fifa-25", genre: "Sports", players: 52, icon: "⚽", color: "#00b4d8" },
-  { name: "Mobile Legends", slug: "mobile-legends", genre: "MOBA", players: 35, icon: "⚔️", color: "#9b59b6" },
-];
-
-const TOURNAMENTS = [
-  {
-    id: 1,
-    name: "Togo Valorant Open S2",
-    slug: "togo-valorant-open-s2",
-    game: "Valorant",
-    gameColor: "#ff4655",
-    tier: "A",
-    status: "ONGOING",
-    startDate: "15 Mar 2025",
-    endDate: "22 Mar 2025",
-    location: "Lomé, Togo",
-    prizePool: "500 000 XOF",
-    teams: 16,
-  },
-  {
-    id: 2,
-    name: "Free Fire Cup Lomé",
-    slug: "free-fire-cup-lome",
-    game: "Free Fire",
-    gameColor: "#ff8c00",
-    tier: "B",
-    status: "UPCOMING",
-    startDate: "5 Avr 2025",
-    endDate: "6 Avr 2025",
-    location: "En ligne",
-    prizePool: "200 000 XOF",
-    teams: 32,
-  },
-  {
-    id: 3,
-    name: "FIFA 25 Challenge National",
-    slug: "fifa-25-challenge-national",
-    game: "FIFA 25",
-    gameColor: "#00b4d8",
-    tier: "S",
-    status: "UPCOMING",
-    startDate: "20 Avr 2025",
-    endDate: "21 Avr 2025",
-    location: "Kara, Togo",
-    prizePool: "1 000 000 XOF",
-    teams: 64,
-  },
-];
-
-const RANKINGS = [
-  {
-    game: "Valorant",
-    gameSlug: "valorant",
-    color: "#ff4655",
-    top: [
-      { rank: 1, pseudo: "ShadowX_TG", city: "Lomé", points: 2850, wins: 3 },
-      { rank: 2, pseudo: "Inferno99", city: "Kara", points: 2310, wins: 2 },
-      { rank: 3, pseudo: "ZeroTwo_GG", city: "Lomé", points: 1980, wins: 1 },
-    ],
-  },
-  {
-    game: "Free Fire",
-    gameSlug: "free-fire",
-    color: "#ff8c00",
-    top: [
-      { rank: 1, pseudo: "Predator_Lomé", city: "Lomé", points: 3200, wins: 5 },
-      { rank: 2, pseudo: "PhantomKill", city: "Sokodé", points: 2740, wins: 3 },
-      { rank: 3, pseudo: "OmegaTG", city: "Lomé", points: 2100, wins: 2 },
-    ],
-  },
-  {
-    game: "FIFA 25",
-    gameSlug: "fifa-25",
-    color: "#00b4d8",
-    top: [
-      { rank: 1, pseudo: "GoalMachine", city: "Lomé", points: 1900, wins: 4 },
-      { rank: 2, pseudo: "TacticoTG", city: "Atakpamé", points: 1650, wins: 2 },
-      { rank: 3, pseudo: "ManUtd_Fan", city: "Lomé", points: 1320, wins: 1 },
-    ],
-  },
-];
-
-const RECENT_RESULTS = [
-  {
-    tournament: "Valorant Open S2 — Quart de finale",
-    team1: "Team Lomé",
-    team2: "Shadow Squad",
-    score: "2 – 1",
-    winner: "Team Lomé",
-    date: "16 Mar 2025",
-  },
-  {
-    tournament: "Valorant Open S2 — Quart de finale",
-    team1: "GG Togo",
-    team2: "North Stars",
-    score: "2 – 0",
-    winner: "GG Togo",
-    date: "16 Mar 2025",
-  },
-  {
-    tournament: "FF Cup Kara — Finale",
-    team1: "Predators",
-    team2: "Delta Force",
-    score: "1er – 4ème",
-    winner: "Predators",
-    date: "12 Mar 2025",
-  },
-];
+function fmtPrize(amount: number | null | undefined, currency = "XOF"): string {
+  if (!amount) return "—";
+  return new Intl.NumberFormat("fr-FR").format(amount) + " " + currency;
+}
 
 // ─── Icônes SVG inline ────────────────────────────────────────
 
@@ -177,9 +88,65 @@ const TIER_STYLES: Record<string, string> = {
 };
 
 const STATUS_STYLES: Record<string, { dot: string; text: string; label: string }> = {
-  ONGOING: { dot: "bg-[#00e676] animate-pulse", text: "text-[#00e676]", label: "En cours" },
-  UPCOMING: { dot: "bg-[#ffd700]", text: "text-[#ffd700]", label: "À venir" },
-  COMPLETED: { dot: "bg-[#9090b0]", text: "text-[#9090b0]", label: "Terminé" },
+  ONGOING:   { dot: "bg-[#00e676] animate-pulse", text: "text-[#00e676]", label: "En cours" },
+  UPCOMING:  { dot: "bg-[#ffd700]",               text: "text-[#ffd700]", label: "À venir"  },
+  COMPLETED: { dot: "bg-[#9090b0]",               text: "text-[#9090b0]", label: "Terminé"  },
+};
+
+// ─── Types ────────────────────────────────────────────────────
+
+type StatItem = { value: string; label: string };
+
+type GameItem = {
+  id: string;
+  name: string;
+  slug: string;
+  genre: string | null;
+  _count: { playerProfiles: number };
+};
+
+type TournamentItem = {
+  id: string;
+  name: string;
+  slug: string;
+  tier: string;
+  status: string;
+  startDate: Date;
+  endDate: Date | null;
+  location: string | null;
+  isOnline: boolean;
+  prizePool: number | null;
+  currency: string;
+  games: Array<{ game: { name: string; slug: string } }>;
+  _count: { participants: number };
+};
+
+type RankingPlayerItem = {
+  rank: number;
+  pseudo: string;
+  city: string | null;
+  totalPoints: number;
+  wins: number;
+};
+
+type GameRanking = {
+  game: { name: string; slug: string };
+  top: RankingPlayerItem[];
+};
+
+type MatchParticipantItem = {
+  team: { name: string; tag: string } | null;
+  score: number | null;
+  isWinner: boolean | null;
+};
+
+type RecentMatchItem = {
+  id: string;
+  endedAt: Date | null;
+  stageName: string;
+  tournamentName: string;
+  tournamentSlug: string;
+  participants: MatchParticipantItem[];
 };
 
 // ─── Composants de sections ───────────────────────────────────
@@ -187,18 +154,17 @@ const STATUS_STYLES: Record<string, { dot: string; text: string; label: string }
 function Navbar() {
   const links = [
     { href: "/tournaments", label: "Tournois" },
-    { href: "/players", label: "Joueurs" },
-    { href: "/teams", label: "Équipes" },
-    { href: "/rankings", label: "Classements" },
-    { href: "/games", label: "Jeux" },
-    { href: "/news", label: "News" },
+    { href: "/players",     label: "Joueurs"  },
+    { href: "/teams",       label: "Équipes"  },
+    { href: "/rankings",    label: "Classements" },
+    { href: "/games",       label: "Jeux"     },
+    { href: "/news",        label: "News"     },
   ];
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-[var(--border)]">
       <div className="absolute inset-0 backdrop-blur-md bg-[rgba(9,9,15,0.92)]" />
       <div className="relative max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
-        {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
           <span className="w-8 h-8 rounded-lg flex items-center justify-center text-[#09090f] font-black text-sm flex-shrink-0 bg-gradient-to-br from-[#00e676] to-[#4fc3f7]">
             GP
@@ -210,7 +176,6 @@ function Navbar() {
           </span>
         </Link>
 
-        {/* Navigation */}
         <nav className="hidden md:flex items-center gap-1">
           {links.map((l) => (
             <Link
@@ -223,7 +188,6 @@ function Navbar() {
           ))}
         </nav>
 
-        {/* Auth */}
         <div className="flex items-center gap-3">
           <Link
             href="/auth/login"
@@ -243,26 +207,21 @@ function Navbar() {
   );
 }
 
-function HeroSection() {
+function HeroSection({ stats }: { stats: StatItem[] }) {
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden bg-[var(--bg-primary)]">
-      {/* Grille subtile */}
       <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(0,230,118,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(0,230,118,0.07)_1px,transparent_1px)] [background-size:60px_60px]" />
-      {/* Halos de lumière */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl opacity-10 pointer-events-none bg-[#00e676]" />
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full blur-3xl opacity-[0.08] pointer-events-none bg-[#4fc3f7]" />
       <div className="absolute top-1/2 right-1/3 w-64 h-64 rounded-full blur-3xl opacity-5 pointer-events-none bg-[#ffd700]" />
 
-      {/* Contenu principal */}
       <div className="relative z-10 max-w-7xl mx-auto px-6 pt-28 pb-16 w-full">
         <div className="max-w-3xl">
-          {/* Badge Togo */}
           <div className="inline-flex items-center gap-2 mb-6 px-3 py-1.5 rounded-full text-xs font-semibold bg-[rgba(0,230,118,0.1)] border border-[rgba(0,230,118,0.3)] text-[#00e676]">
             <span className="w-2 h-2 rounded-full bg-[#00e676] animate-pulse" />
             🇹🇬 La plateforme esport du Togo
           </div>
 
-          {/* Titre principal */}
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-none tracking-tight mb-6">
             <span className="text-[#f0f0f8]">L&apos;esport</span>
             <br />
@@ -273,13 +232,11 @@ function HeroSection() {
             <span className="text-[#f0f0f8]">centralisé.</span>
           </h1>
 
-          {/* Description */}
           <p className="text-lg sm:text-xl mb-10 max-w-xl leading-relaxed text-[var(--text-secondary)]">
             Suivez les tournois, retracez les performances des joueurs et découvrez
             les classements officiels de la scène compétitive togolaise.
           </p>
 
-          {/* Boutons CTA */}
           <div className="flex flex-wrap gap-4">
             <Link
               href="/tournaments"
@@ -300,7 +257,7 @@ function HeroSection() {
 
         {/* Barre de statistiques */}
         <div className="mt-16 grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {STATS.map((s) => (
+          {stats.map((s) => (
             <div
               key={s.label}
               className="rounded-xl p-4 text-center bg-[var(--bg-card)] border border-[var(--border)]"
@@ -314,13 +271,12 @@ function HeroSection() {
         </div>
       </div>
 
-      {/* Fondu vers la section suivante */}
       <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none bg-[linear-gradient(to_bottom,transparent,var(--bg-secondary))]" />
     </section>
   );
 }
 
-function GamesSection() {
+function GamesSection({ games }: { games: GameItem[] }) {
   return (
     <section className="py-20 bg-[var(--bg-secondary)]">
       <div className="max-w-7xl mx-auto px-6">
@@ -334,38 +290,44 @@ function GamesSection() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {GAMES.map((g) => (
-            <Link
-              key={g.slug}
-              href={`/games/${g.slug}`}
-              className="group relative rounded-2xl p-5 overflow-hidden transition-all duration-200 hover:-translate-y-1 bg-[var(--bg-card)] border border-[var(--border)]"
-            >
-              {/* Halo de couleur */}
-              <div
-                className="absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none"
-                style={{ background: g.color }}
-              />
-              <div className="relative z-10">
-                <span className="text-4xl">{g.icon}</span>
-                <div className="mt-3">
-                  <h3 className="font-bold text-sm text-[var(--text-primary)]">{g.name}</h3>
-                  <p className="text-xs mt-0.5 text-[var(--text-secondary)]">{g.genre}</p>
-                </div>
-                <div className="mt-3 flex items-center gap-1 text-xs font-semibold" style={{ color: g.color }}>
-                  <IconUsers size={12} />
-                  {g.players} joueurs
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+        {games.length === 0 ? (
+          <p className="text-sm text-[var(--text-muted)]">Aucun jeu actif pour le moment.</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {games.map((g) => {
+              const meta = getGameMeta(g.slug);
+              return (
+                <Link
+                  key={g.slug}
+                  href={`/games/${g.slug}`}
+                  className="group relative rounded-2xl p-5 overflow-hidden transition-all duration-200 hover:-translate-y-1 bg-[var(--bg-card)] border border-[var(--border)]"
+                >
+                  <div
+                    className="absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none"
+                    style={{ background: meta.color }}
+                  />
+                  <div className="relative z-10">
+                    <span className="text-4xl">{meta.icon}</span>
+                    <div className="mt-3">
+                      <h3 className="font-bold text-sm text-[var(--text-primary)]">{g.name}</h3>
+                      <p className="text-xs mt-0.5 text-[var(--text-secondary)]">{g.genre ?? "Jeu compétitif"}</p>
+                    </div>
+                    <div className="mt-3 flex items-center gap-1 text-xs font-semibold" style={{ color: meta.color }}>
+                      <IconUsers size={12} />
+                      {g._count.playerProfiles} joueur{g._count.playerProfiles !== 1 ? "s" : ""}
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
     </section>
   );
 }
 
-function TournamentsSection() {
+function TournamentsSection({ tournaments }: { tournaments: TournamentItem[] }) {
   return (
     <section className="py-20 bg-[var(--bg-primary)]">
       <div className="max-w-7xl mx-auto px-6">
@@ -379,68 +341,72 @@ function TournamentsSection() {
           </Link>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {TOURNAMENTS.map((t) => {
-            const st = STATUS_STYLES[t.status];
-            return (
-              <Link
-                key={t.id}
-                href={`/tournaments/${t.slug}`}
-                className="group rounded-2xl overflow-hidden transition-all duration-200 hover:-translate-y-1 flex flex-col bg-[var(--bg-card)] border border-[var(--border)]"
-              >
-                {/* Bandeau de couleur du jeu */}
-                <div className="h-1.5 w-full" style={{ background: t.gameColor }} />
+        {tournaments.length === 0 ? (
+          <p className="text-sm text-[var(--text-muted)]">Aucun tournoi prévu pour le moment.</p>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {tournaments.map((t) => {
+              const st = STATUS_STYLES[t.status] ?? STATUS_STYLES.UPCOMING;
+              const firstGame = t.games[0]?.game;
+              const gameMeta = firstGame ? getGameMeta(firstGame.slug) : DEFAULT_GAME_META;
+              const gameName = firstGame?.name ?? "—";
+              return (
+                <Link
+                  key={t.id}
+                  href={`/tournaments/${t.slug}`}
+                  className="group rounded-2xl overflow-hidden transition-all duration-200 hover:-translate-y-1 flex flex-col bg-[var(--bg-card)] border border-[var(--border)]"
+                >
+                  <div className="h-1.5 w-full" style={{ background: gameMeta.color }} />
 
-                <div className="p-5 flex flex-col flex-1">
-                  {/* Badges tier + statut */}
-                  <div className="flex items-center justify-between mb-3">
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded ${TIER_STYLES[t.tier]}`}>
-                      Tier {t.tier}
-                    </span>
-                    <span className={`flex items-center gap-1.5 text-xs font-semibold ${st.text}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
-                      {st.label}
-                    </span>
+                  <div className="p-5 flex flex-col flex-1">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded ${TIER_STYLES[t.tier] ?? TIER_STYLES.C}`}>
+                        Tier {t.tier}
+                      </span>
+                      <span className={`flex items-center gap-1.5 text-xs font-semibold ${st.text}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
+                        {st.label}
+                      </span>
+                    </div>
+
+                    <h3 className="font-bold text-base leading-tight mb-1 text-[var(--text-primary)]">{t.name}</h3>
+                    <p className="text-xs mb-4" style={{ color: gameMeta.color }}>{gameName}</p>
+
+                    <div className="space-y-1.5 mt-auto">
+                      <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+                        <IconCalendar />
+                        {fmtDate(t.startDate)} → {fmtDate(t.endDate)}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+                        <IconLocation />
+                        {t.isOnline ? "En ligne" : (t.location ?? "—")}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-4 flex items-center justify-between border-t border-[var(--border)]">
+                      <div>
+                        <div className="text-xs text-[var(--text-muted)]">Prize pool</div>
+                        <div className="font-bold text-sm text-[var(--accent-gold)]">
+                          {fmtPrize(t.prizePool, t.currency)}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs text-[var(--text-muted)]">Participants</div>
+                        <div className="font-bold text-sm text-[var(--text-primary)]">{t._count.participants}</div>
+                      </div>
+                    </div>
                   </div>
-
-                  {/* Nom du tournoi */}
-                  <h3 className="font-bold text-base leading-tight mb-1 text-[var(--text-primary)]">{t.name}</h3>
-                  <p className="text-xs mb-4" style={{ color: t.gameColor }}>{t.game}</p>
-
-                  {/* Métadonnées */}
-                  <div className="space-y-1.5 mt-auto">
-                    <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-                      <IconCalendar />
-                      {t.startDate} → {t.endDate}
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-                      <IconLocation />
-                      {t.location}
-                    </div>
-                  </div>
-
-                  {/* Footer de la carte */}
-                  <div className="mt-4 pt-4 flex items-center justify-between border-t border-[var(--border)]">
-                    <div>
-                      <div className="text-xs text-[var(--text-muted)]">Prize pool</div>
-                      <div className="font-bold text-sm text-[var(--accent-gold)]">{t.prizePool}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xs text-[var(--text-muted)]">Équipes</div>
-                      <div className="font-bold text-sm text-[var(--text-primary)]">{t.teams}</div>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
     </section>
   );
 }
 
-function RankingsSection() {
+function RankingsSection({ rankings }: { rankings: GameRanking[] }) {
   return (
     <section className="py-20 bg-[var(--bg-secondary)]">
       <div className="max-w-7xl mx-auto px-6">
@@ -455,69 +421,63 @@ function RankingsSection() {
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {RANKINGS.map((r) => (
-            <div key={r.game} className="rounded-2xl overflow-hidden bg-[var(--bg-card)] border border-[var(--border)]">
-              {/* En-tête du classement */}
-              <div className="px-5 py-4 flex items-center justify-between border-b border-[var(--border)]">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full" style={{ background: r.color }} />
-                  <h3 className="font-bold text-[var(--text-primary)]">{r.game}</h3>
-                </div>
-                <Link
-                  href={`/rankings/${r.gameSlug}`}
-                  className="text-xs font-semibold hover:opacity-70 transition-opacity"
-                  style={{ color: r.color }}
-                >
-                  Voir tout
-                </Link>
-              </div>
-
-              {/* Top 3 */}
-              <div>
-                {r.top.map((p, i) => (
+          {rankings.map((r) => {
+            const meta = getGameMeta(r.game.slug);
+            return (
+              <div key={r.game.slug} className="rounded-2xl overflow-hidden bg-[var(--bg-card)] border border-[var(--border)]">
+                <div className="px-5 py-4 flex items-center justify-between border-b border-[var(--border)]">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full" style={{ background: meta.color }} />
+                    <h3 className="font-bold text-[var(--text-primary)]">{r.game.name}</h3>
+                  </div>
                   <Link
-                    key={p.pseudo}
-                    href={`/players/${p.pseudo}`}
-                    className={`flex items-center gap-4 px-5 py-3.5 hover:opacity-80 transition-opacity ${i < r.top.length - 1 ? "border-b border-[var(--border)]" : ""}`}
+                    href={`/rankings/${r.game.slug}`}
+                    className="text-xs font-semibold hover:opacity-70 transition-opacity"
+                    style={{ color: meta.color }}
                   >
-                    {/* Rang */}
-                    <span className={`w-6 text-center font-black text-sm flex-shrink-0 ${p.rank === 1 ? "text-[#ffd700]" : p.rank === 2 ? "text-[#c0c0c0]" : "text-[#cd7f32]"}`}>
-                      {p.rank}
-                    </span>
-
-                    {/* Avatar placeholder */}
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                      style={{ background: r.color + "22", color: r.color }}
-                    >
-                      {p.pseudo[0].toUpperCase()}
-                    </div>
-
-                    {/* Infos joueur */}
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-sm truncate text-[var(--text-primary)]">{p.pseudo}</div>
-                      <div className="text-xs text-[var(--text-muted)]">{p.city}</div>
-                    </div>
-
-                    {/* Points */}
-                    <div className="text-right flex-shrink-0">
-                      <div className="text-sm font-bold text-[var(--accent-green)]">
-                        {p.points.toLocaleString("fr-FR")}
-                      </div>
-                      <div className="text-xs text-[var(--text-muted)]">pts</div>
-                    </div>
+                    Voir tout
                   </Link>
-                ))}
+                </div>
+
+                <div>
+                  {r.top.map((p, i) => (
+                    <Link
+                      key={p.pseudo}
+                      href={`/players/${p.pseudo}`}
+                      className={`flex items-center gap-4 px-5 py-3.5 hover:opacity-80 transition-opacity ${i < r.top.length - 1 ? "border-b border-[var(--border)]" : ""}`}
+                    >
+                      <span className={`w-6 text-center font-black text-sm flex-shrink-0 ${p.rank === 1 ? "text-[#ffd700]" : p.rank === 2 ? "text-[#c0c0c0]" : "text-[#cd7f32]"}`}>
+                        {p.rank}
+                      </span>
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                        style={{ background: meta.color + "22", color: meta.color }}
+                      >
+                        {p.pseudo[0].toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm truncate text-[var(--text-primary)]">{p.pseudo}</div>
+                        <div className="text-xs text-[var(--text-muted)]">{p.city ?? "—"}</div>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <div className="text-sm font-bold text-[var(--accent-green)]">
+                          {p.totalPoints.toLocaleString("fr-FR")}
+                        </div>
+                        <div className="text-xs text-[var(--text-muted)]">pts</div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>
   );
 }
 
-function RecentResultsSection() {
+function RecentResultsSection({ matches }: { matches: RecentMatchItem[] }) {
   return (
     <section className="py-20 bg-[var(--bg-primary)]">
       <div className="max-w-7xl mx-auto px-6">
@@ -527,33 +487,45 @@ function RecentResultsSection() {
         </div>
 
         <div className="space-y-3">
-          {RECENT_RESULTS.map((r, i) => (
-            <div
-              key={i}
-              className="rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 bg-[var(--bg-card)] border border-[var(--border)]"
-            >
-              {/* Nom du tournoi */}
-              <div className="flex-1 min-w-0">
-                <p className="text-xs truncate text-[var(--text-muted)]">{r.tournament}</p>
-              </div>
+          {matches.map((m) => {
+            const [p1, p2] = m.participants;
+            const team1 = p1?.team?.name ?? p1?.team?.tag ?? "—";
+            const team2 = p2?.team?.name ?? p2?.team?.tag ?? "—";
+            const score = p1 !== undefined && p2 !== undefined
+              ? `${p1.score ?? "?"} – ${p2.score ?? "?"}`
+              : "—";
+            const winner1 = p1?.isWinner === true;
+            const winner2 = p2?.isWinner === true;
 
-              {/* Résultat du match */}
-              <div className="flex items-center gap-4 justify-center">
-                <span className={`font-bold text-sm text-right w-28 truncate ${r.winner === r.team1 ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"}`}>
-                  {r.team1}
-                </span>
-                <span className="font-black text-sm px-3 py-1 rounded-lg tabular-nums bg-[var(--bg-secondary)] text-[var(--accent-green)]">
-                  {r.score}
-                </span>
-                <span className={`font-bold text-sm text-left w-28 truncate ${r.winner === r.team2 ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"}`}>
-                  {r.team2}
-                </span>
-              </div>
+            return (
+              <div
+                key={m.id}
+                className="rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 bg-[var(--bg-card)] border border-[var(--border)]"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs truncate text-[var(--text-muted)]">
+                    {m.tournamentName} — {m.stageName}
+                  </p>
+                </div>
 
-              {/* Date */}
-              <div className="text-xs sm:w-24 flex-shrink-0 text-right text-[var(--text-muted)]">{r.date}</div>
-            </div>
-          ))}
+                <div className="flex items-center gap-4 justify-center">
+                  <span className={`font-bold text-sm text-right w-28 truncate ${winner1 ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"}`}>
+                    {team1}
+                  </span>
+                  <span className="font-black text-sm px-3 py-1 rounded-lg tabular-nums bg-[var(--bg-secondary)] text-[var(--accent-green)]">
+                    {score}
+                  </span>
+                  <span className={`font-bold text-sm text-left w-28 truncate ${winner2 ? "text-[var(--text-primary)]" : "text-[var(--text-muted)]"}`}>
+                    {team2}
+                  </span>
+                </div>
+
+                <div className="text-xs sm:w-24 flex-shrink-0 text-right text-[var(--text-muted)]">
+                  {fmtDate(m.endedAt)}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
@@ -565,7 +537,6 @@ function CtaSection() {
     <section className="py-24 bg-[var(--bg-secondary)]">
       <div className="max-w-7xl mx-auto px-6">
         <div className="relative overflow-hidden rounded-3xl p-10 sm:p-16 text-center bg-[linear-gradient(135deg,rgba(0,230,118,0.08)_0%,rgba(79,195,247,0.08)_50%,rgba(255,215,0,0.05)_100%)] border border-[rgba(0,230,118,0.2)]">
-          {/* Décorations */}
           <div className="absolute -top-16 -left-16 w-64 h-64 rounded-full blur-3xl opacity-15 pointer-events-none bg-[#00e676]" />
           <div className="absolute -bottom-16 -right-16 w-64 h-64 rounded-full blur-3xl opacity-10 pointer-events-none bg-[#4fc3f7]" />
 
@@ -604,28 +575,28 @@ function Footer() {
     {
       title: "Plateforme",
       links: [
-        { href: "/tournaments", label: "Tournois" },
-        { href: "/players", label: "Joueurs" },
-        { href: "/teams", label: "Équipes" },
-        { href: "/rankings", label: "Classements" },
+        { href: "/tournaments", label: "Tournois"     },
+        { href: "/players",     label: "Joueurs"      },
+        { href: "/teams",       label: "Équipes"      },
+        { href: "/rankings",    label: "Classements"  },
       ],
     },
     {
       title: "Jeux",
       links: [
-        { href: "/games/valorant", label: "Valorant" },
-        { href: "/games/free-fire", label: "Free Fire" },
-        { href: "/games/fifa-25", label: "FIFA 25" },
-        { href: "/games/mobile-legends", label: "Mobile Legends" },
+        { href: "/games/valorant",        label: "Valorant"        },
+        { href: "/games/free-fire",       label: "Free Fire"       },
+        { href: "/games/fifa-25",         label: "FIFA 25"         },
+        { href: "/games/mobile-legends",  label: "Mobile Legends"  },
       ],
     },
     {
       title: "Informations",
       links: [
-        { href: "/news", label: "Actualités" },
-        { href: "/about", label: "À propos" },
-        { href: "/contact", label: "Contact" },
-        { href: "/admin", label: "Administration" },
+        { href: "/news",    label: "Actualités"    },
+        { href: "/about",   label: "À propos"      },
+        { href: "/contact", label: "Contact"       },
+        { href: "/admin",   label: "Administration" },
       ],
     },
   ];
@@ -634,7 +605,6 @@ function Footer() {
     <footer className="pt-16 pb-8 bg-[var(--bg-primary)] border-t border-[var(--border)]">
       <div className="max-w-7xl mx-auto px-6">
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
-          {/* Marque */}
           <div>
             <div className="flex items-center gap-2 mb-4">
               <span className="w-8 h-8 rounded-lg flex items-center justify-center text-[#09090f] font-black text-sm flex-shrink-0 bg-gradient-to-br from-[#00e676] to-[#4fc3f7]">
@@ -656,7 +626,6 @@ function Footer() {
             </div>
           </div>
 
-          {/* Colonnes de liens */}
           {columns.map((col) => (
             <div key={col.title}>
               <h4 className="font-semibold text-sm mb-4 text-[var(--text-primary)]">{col.title}</h4>
@@ -673,12 +642,11 @@ function Footer() {
           ))}
         </div>
 
-        {/* Bas du footer */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs border-t border-[var(--border)] text-[var(--text-muted)]">
           <p>© {new Date().getFullYear()} GamePedia TG. Tous droits réservés.</p>
           <div className="flex items-center gap-4">
             <Link href="/privacy" className="hover:opacity-80 transition-opacity">Confidentialité</Link>
-            <Link href="/terms" className="hover:opacity-80 transition-opacity">Conditions</Link>
+            <Link href="/terms"   className="hover:opacity-80 transition-opacity">Conditions</Link>
           </div>
         </div>
       </div>
@@ -686,17 +654,134 @@ function Footer() {
   );
 }
 
-// ─── Page principale ──────────────────────────────────────────
+// ─── Page principale (Server Component async) ─────────────────
 
-export default function HomePage() {
+export default async function HomePage() {
+  // ── Statistiques globales ──────────────────────────────────
+  const [playerCount, tournamentCount, gameCount, prizeAgg] = await Promise.all([
+    db.player.count({ where: { isActive: true } }),
+    db.tournament.count(),
+    db.game.count({ where: { isActive: true } }),
+    db.tournament.aggregate({ _sum: { prizePool: true } }),
+  ]);
+
+  const stats: StatItem[] = [
+    { value: playerCount.toString(),     label: "Joueurs inscrits"       },
+    { value: tournamentCount.toString(), label: "Tournois organisés"     },
+    { value: gameCount.toString(),       label: "Jeux actifs"            },
+    { value: fmtPrize(prizeAgg._sum.prizePool), label: "Prize money distribué" },
+  ];
+
+  // ── Jeux actifs (max 4 pour la grille) ────────────────────
+  const games = await db.game.findMany({
+    where: { isActive: true },
+    orderBy: { name: "asc" },
+    take: 4,
+    include: { _count: { select: { playerProfiles: true } } },
+  });
+
+  // ── Tournois en cours + à venir (ONGOING en premier) ──────
+  const [ongoingT, upcomingT] = await Promise.all([
+    db.tournament.findMany({
+      where: { status: "ONGOING" },
+      orderBy: { startDate: "asc" },
+      take: 3,
+      include: {
+        games: { include: { game: { select: { name: true, slug: true } } } },
+        _count: { select: { participants: true } },
+      },
+    }),
+    db.tournament.findMany({
+      where: { status: "UPCOMING" },
+      orderBy: { startDate: "asc" },
+      take: 3,
+      include: {
+        games: { include: { game: { select: { name: true, slug: true } } } },
+        _count: { select: { participants: true } },
+      },
+    }),
+  ]);
+  const tournaments = [...ongoingT, ...upcomingT].slice(0, 3);
+
+  // ── Classements par jeu (saison active) ───────────────────
+  const [activeSeason, rankingGames] = await Promise.all([
+    db.season.findFirst({ where: { isActive: true } }),
+    db.game.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true, slug: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+
+  const rankingsRaw = await Promise.all(
+    rankingGames.map(async (game) => {
+      const entries = await db.rankingEntry.findMany({
+        where: {
+          gameId: game.id,
+          playerId: { not: null }, // classement individuel uniquement
+          ...(activeSeason ? { seasonId: activeSeason.id } : {}),
+        },
+        orderBy: { rank: "asc" },
+        take: 3,
+        include: { player: { select: { pseudo: true, city: true } } },
+      });
+      return { game, entries };
+    }),
+  );
+
+  const rankings: GameRanking[] = rankingsRaw
+    .filter((r) => r.entries.length > 0)
+    .slice(0, 3)
+    .map((r) => ({
+      game: r.game,
+      top: r.entries.map((e, i) => ({
+        rank:        e.rank ?? i + 1,
+        pseudo:      e.player?.pseudo ?? "—",
+        city:        e.player?.city ?? null,
+        totalPoints: e.totalPoints,
+        wins:        e.wins,
+      })),
+    }));
+
+  // ── Derniers résultats ─────────────────────────────────────
+  const rawMatches = await db.match.findMany({
+    where: { status: "COMPLETED" },
+    orderBy: { endedAt: "desc" },
+    take: 5,
+    include: {
+      stage: {
+        select: {
+          name: true,
+          tournament: { select: { name: true, slug: true } },
+        },
+      },
+      participants: {
+        include: { team: { select: { name: true, tag: true } } },
+      },
+    },
+  });
+
+  const recentMatches: RecentMatchItem[] = rawMatches.map((m) => ({
+    id:               m.id,
+    endedAt:          m.endedAt,
+    stageName:        m.stage.name,
+    tournamentName:   m.stage.tournament.name,
+    tournamentSlug:   m.stage.tournament.slug,
+    participants:     m.participants.map((p) => ({
+      team:     p.team,
+      score:    p.score,
+      isWinner: p.isWinner,
+    })),
+  }));
+
   return (
     <main>
       <Navbar />
-      <HeroSection />
-      <GamesSection />
-      <TournamentsSection />
-      <RankingsSection />
-      <RecentResultsSection />
+      <HeroSection stats={stats} />
+      <GamesSection games={games} />
+      <TournamentsSection tournaments={tournaments} />
+      {rankings.length > 0 && <RankingsSection rankings={rankings} />}
+      {recentMatches.length > 0 && <RecentResultsSection matches={recentMatches} />}
       <CtaSection />
       <Footer />
     </main>

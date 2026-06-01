@@ -7,8 +7,8 @@ import {
 
 // ── Config statique de navigation (pas des données) ──────────
 
-const KPI_CONFIG = [
-  {
+const KPI_CONFIG = [ 
+  {  
     key: "players" as const,
     label: "Joueurs inscrits",
     icon: "👤",
