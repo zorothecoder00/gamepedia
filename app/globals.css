@@ -2,30 +2,35 @@
 
 :root {
   /* Palette principale — GamePedia TG */
-  --bg-primary: #09090f;
-  --bg-secondary: #111120;
-  --bg-card: #15152a;
-  --bg-card-hover: #1c1c35;
+  /* Backgrounds : neutres chauds (fini le bleu-violet froid) */
+  --bg-primary:    #090908;
+  --bg-secondary:  #0f0f0d;
+  --bg-card:       #151512;
+  --bg-card-hover: #1d1d19;
 
-  --accent-green: #00e676;
-  --accent-green-dim: #00c864;
-  --accent-gold: #ffd700;
-  --accent-gold-dim: #e6b800;
-  --accent-red: #ff4444;
-  --accent-blue: #4fc3f7;
+  /* Accents inspirés du drapeau togolais */
+  --accent-green:     #00c44a;  /* vert togo */
+  --accent-green-dim: #009a3b;
+  --accent-gold:      #ffcc00;  /* jaune togo */
+  --accent-gold-dim:  #d9ac00;
+  --accent-red:       #e63030;  /* rouge togo */
+  --accent-red-dim:   #c42828;
+  --accent-blue:      #4fc3f7;  /* conservé pour les couleurs de jeux */
 
-  /* Tiers de tournoi */
-  --tier-s: #ff6b35;
-  --tier-a: #9b59b6;
-  --tier-b: #3498db;
-  --tier-c: #7f8c8d;
+  /* Tiers : du plus prestigieux (rouge) au moins (gris) */
+  --tier-s: #e63030;  /* rouge → tournoi national majeur */
+  --tier-a: #ffcc00;  /* jaune → tournoi régional     */
+  --tier-b: #00c44a;  /* vert  → tournoi communautaire */
+  --tier-c: #7f8c8d;  /* gris  → amateur / qualif      */
 
-  --text-primary: #f0f0f8;
-  --text-secondary: #9090b0;
-  --text-muted: #5a5a7a;
+  /* Texte : légèrement chaud */
+  --text-primary:   #f0ede6;
+  --text-secondary: #96908a;
+  --text-muted:     #565048;
 
-  --border: #1e1e3a;
-  --border-bright: #2e2e55;
+  /* Bordures : chaudes */
+  --border:        #1e1d18;
+  --border-bright: #2c2b22;
 }
 
 @theme inline {
@@ -69,6 +74,6 @@ body {
 
 /* Sélection de texte */
 ::selection {
-  background: rgba(0, 230, 118, 0.25);
+  background: rgba(0, 196, 74, 0.28);
   color: var(--text-primary);
 }

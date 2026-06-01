@@ -6,17 +6,16 @@ import Link from "next/link";
 import { db } from "@/lib/prisma";
 
 // ─── Métadonnées visuelles des jeux (couleur + icône) ────────
-// Ces infos ne sont pas en base : on les mappe par slug.
 const GAME_META: Record<string, { color: string; icon: string }> = {
-  "valorant":        { color: "#ff4655", icon: "🎯" },
-  "free-fire":       { color: "#ff8c00", icon: "🔥" },
-  "fifa-25":         { color: "#00b4d8", icon: "⚽" },
-  "mobile-legends":  { color: "#9b59b6", icon: "⚔️" },
-  "cs2":             { color: "#e3a04f", icon: "💥" },
-  "pubg-mobile":     { color: "#f5c518", icon: "🪖" },
+  "valorant":          { color: "#e63030", icon: "🎯" },
+  "free-fire":         { color: "#ff8c00", icon: "🔥" },
+  "fifa-25":           { color: "#00c44a", icon: "⚽" },
+  "mobile-legends":    { color: "#ffcc00", icon: "⚔️" },
+  "cs2":               { color: "#e3a04f", icon: "💥" },
+  "pubg-mobile":       { color: "#f5c518", icon: "🪖" },
   "league-of-legends": { color: "#c89b3c", icon: "🧙" },
 };
-const DEFAULT_GAME_META = { color: "#00e676", icon: "🎮" };
+const DEFAULT_GAME_META = { color: "#00c44a", icon: "🎮" };
 function getGameMeta(slug: string) {
   return GAME_META[slug] ?? DEFAULT_GAME_META;
 }
@@ -79,18 +78,19 @@ function IconArrow({ size = 16 }: { size?: number }) {
 }
 
 // ─── Styles par tier / statut ─────────────────────────────────
+// Tiers calés sur les couleurs du drapeau togolais
 
 const TIER_STYLES: Record<string, string> = {
-  S: "bg-[#ff6b35]/10 text-[#ff6b35] border border-[#ff6b35]/40",
-  A: "bg-[#9b59b6]/10 text-[#9b59b6] border border-[#9b59b6]/40",
-  B: "bg-[#3498db]/10 text-[#3498db] border border-[#3498db]/40",
+  S: "bg-[#e63030]/10 text-[#e63030] border border-[#e63030]/40",
+  A: "bg-[#ffcc00]/10 text-[#ffcc00] border border-[#ffcc00]/40",
+  B: "bg-[#00c44a]/10 text-[#00c44a] border border-[#00c44a]/40",
   C: "bg-[#7f8c8d]/10 text-[#7f8c8d] border border-[#7f8c8d]/40",
 };
 
 const STATUS_STYLES: Record<string, { dot: string; text: string; label: string }> = {
-  ONGOING:   { dot: "bg-[#00e676] animate-pulse", text: "text-[#00e676]", label: "En cours" },
-  UPCOMING:  { dot: "bg-[#ffd700]",               text: "text-[#ffd700]", label: "À venir"  },
-  COMPLETED: { dot: "bg-[#9090b0]",               text: "text-[#9090b0]", label: "Terminé"  },
+  ONGOING:   { dot: "bg-[#00c44a] animate-pulse", text: "text-[#00c44a]", label: "En cours" },
+  UPCOMING:  { dot: "bg-[#ffcc00]",               text: "text-[#ffcc00]", label: "À venir"  },
+  COMPLETED: { dot: "bg-[#7f8c8d]",               text: "text-[#7f8c8d]", label: "Terminé"  },
 };
 
 // ─── Types ────────────────────────────────────────────────────
@@ -153,45 +153,48 @@ type RecentMatchItem = {
 
 function Navbar() {
   const links = [
-    { href: "/tournaments", label: "Tournois" },
-    { href: "/players",     label: "Joueurs"  },
-    { href: "/teams",       label: "Équipes"  },
+    { href: "/tournaments", label: "Tournois"    },
+    { href: "/players",     label: "Joueurs"     },
+    { href: "/teams",       label: "Équipes"     },
     { href: "/rankings",    label: "Classements" },
-    { href: "/games",       label: "Jeux"     },
-    { href: "/news",        label: "News"     },
+    { href: "/games",       label: "Jeux"        },
+    { href: "/news",        label: "News"        },
   ];
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-[var(--border)]">
-      <div className="absolute inset-0 backdrop-blur-md bg-[rgba(9,9,15,0.92)]" />
+      <div className="absolute inset-0 backdrop-blur-md bg-[rgba(9,9,8,0.92)]" />
       <div className="relative max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
+        {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <span className="w-8 h-8 rounded-lg flex items-center justify-center text-[#09090f] font-black text-sm flex-shrink-0 bg-gradient-to-br from-[#00e676] to-[#4fc3f7]">
+          <span className="w-8 h-8 rounded-lg flex items-center justify-center text-[#09090f] font-black text-sm flex-shrink-0 bg-gradient-to-br from-[#00c44a] via-[#ffcc00] to-[#e63030]">
             GP
           </span>
           <span className="font-bold text-lg tracking-tight">
-            <span className="text-[#00e676]">Game</span>
-            <span className="text-[#f0f0f8]">Pedia</span>
-            <span className="ml-1 text-xs font-semibold text-[#ffd700]">TG</span>
+            <span className="text-[#00c44a]">Game</span>
+            <span className="text-[#f0ede6]">Pedia</span>
+            <span className="ml-1 text-xs font-semibold text-[#ffcc00]">TG</span>
           </span>
         </Link>
 
+        {/* Navigation */}
         <nav className="hidden md:flex items-center gap-1">
           {links.map((l) => (
             <Link
               key={l.href}
               href={l.href}
-              className="px-3 py-2 rounded-md text-sm font-medium text-[var(--text-secondary)] hover:text-white hover:bg-white/5 transition-all duration-150"
+              className="px-3 py-2 rounded-md text-sm font-medium text-[var(--text-secondary)] hover:text-[#f0ede6] hover:bg-white/5 transition-all duration-150"
             >
               {l.label}
             </Link>
           ))}
         </nav>
 
+        {/* Auth */}
         <div className="flex items-center gap-3">
           <Link
             href="/auth/login"
-            className="hidden sm:block text-sm font-medium text-[var(--text-secondary)] hover:text-white transition-colors"
+            className="hidden sm:block text-sm font-medium text-[var(--text-secondary)] hover:text-[#f0ede6] transition-colors"
           >
             Connexion
           </Link>
@@ -210,26 +213,31 @@ function Navbar() {
 function HeroSection({ stats }: { stats: StatItem[] }) {
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden bg-[var(--bg-primary)]">
-      <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(0,230,118,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(0,230,118,0.07)_1px,transparent_1px)] [background-size:60px_60px]" />
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl opacity-10 pointer-events-none bg-[#00e676]" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full blur-3xl opacity-[0.08] pointer-events-none bg-[#4fc3f7]" />
-      <div className="absolute top-1/2 right-1/3 w-64 h-64 rounded-full blur-3xl opacity-5 pointer-events-none bg-[#ffd700]" />
+      {/* Grille subtile */}
+      <div className="absolute inset-0 opacity-[0.15] [background-image:linear-gradient(rgba(0,196,74,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(0,196,74,0.06)_1px,transparent_1px)] [background-size:60px_60px]" />
+
+      {/* Halos drapeau togolais */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl opacity-[0.09] pointer-events-none bg-[#00c44a]" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full blur-3xl opacity-[0.08] pointer-events-none bg-[#ffcc00]" />
+      <div className="absolute top-1/2 right-1/3 w-64 h-64 rounded-full blur-3xl opacity-[0.07] pointer-events-none bg-[#e63030]" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 pt-28 pb-16 w-full">
         <div className="max-w-3xl">
-          <div className="inline-flex items-center gap-2 mb-6 px-3 py-1.5 rounded-full text-xs font-semibold bg-[rgba(0,230,118,0.1)] border border-[rgba(0,230,118,0.3)] text-[#00e676]">
-            <span className="w-2 h-2 rounded-full bg-[#00e676] animate-pulse" />
+          {/* Badge Togo */}
+          <div className="inline-flex items-center gap-2 mb-6 px-3 py-1.5 rounded-full text-xs font-semibold bg-[rgba(0,196,74,0.1)] border border-[rgba(0,196,74,0.3)] text-[#00c44a]">
+            <span className="w-2 h-2 rounded-full bg-[#00c44a] animate-pulse" />
             🇹🇬 La plateforme esport du Togo
           </div>
 
+          {/* Titre — couleurs du drapeau */}
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-none tracking-tight mb-6">
-            <span className="text-[#f0f0f8]">L&apos;esport</span>
+            <span className="text-[#f0ede6]">L&apos;esport</span>
             <br />
-            <span className="bg-[linear-gradient(135deg,#00e676_0%,#4fc3f7_50%,#ffd700_100%)] bg-clip-text text-transparent">
+            <span className="bg-[linear-gradient(135deg,#00c44a_0%,#ffcc00_50%,#e63030_100%)] bg-clip-text text-transparent">
               togolais
             </span>
             <br />
-            <span className="text-[#f0f0f8]">centralisé.</span>
+            <span className="text-[#f0ede6]">centralisé.</span>
           </h1>
 
           <p className="text-lg sm:text-xl mb-10 max-w-xl leading-relaxed text-[var(--text-secondary)]">
@@ -255,19 +263,23 @@ function HeroSection({ stats }: { stats: StatItem[] }) {
           </div>
         </div>
 
-        {/* Barre de statistiques */}
+        {/* Stats */}
         <div className="mt-16 grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {stats.map((s) => (
-            <div
-              key={s.label}
-              className="rounded-xl p-4 text-center bg-[var(--bg-card)] border border-[var(--border)]"
-            >
-              <div className="text-2xl sm:text-3xl font-black mb-1 text-[var(--accent-green)]">
-                {s.value}
+          {stats.map((s, i) => {
+            // Couleur de la valeur : vert, jaune, rouge, vert (cycle drapeau)
+            const colors = ["#00c44a", "#ffcc00", "#e63030", "#00c44a"];
+            return (
+              <div
+                key={s.label}
+                className="rounded-xl p-4 text-center bg-[var(--bg-card)] border border-[var(--border)]"
+              >
+                <div className="text-2xl sm:text-3xl font-black mb-1" style={{ color: colors[i % colors.length] }}>
+                  {s.value}
+                </div>
+                <div className="text-xs sm:text-sm text-[var(--text-secondary)]">{s.label}</div>
               </div>
-              <div className="text-xs sm:text-sm text-[var(--text-secondary)]">{s.label}</div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -407,6 +419,9 @@ function TournamentsSection({ tournaments }: { tournaments: TournamentItem[] }) 
 }
 
 function RankingsSection({ rankings }: { rankings: GameRanking[] }) {
+  // Médailles : or → argent → bronze (couleurs classiques du podium)
+  const MEDAL = ["#ffcc00", "#c0c0c0", "#cd7f32"];
+
   return (
     <section className="py-20 bg-[var(--bg-secondary)]">
       <div className="max-w-7xl mx-auto px-6">
@@ -444,9 +459,12 @@ function RankingsSection({ rankings }: { rankings: GameRanking[] }) {
                     <Link
                       key={p.pseudo}
                       href={`/players/${p.pseudo}`}
-                      className={`flex items-center gap-4 px-5 py-3.5 hover:opacity-80 transition-opacity ${i < r.top.length - 1 ? "border-b border-[var(--border)]" : ""}`}
+                      className={`flex items-center gap-4 px-5 py-3.5 hover:bg-white/[0.02] transition-colors ${i < r.top.length - 1 ? "border-b border-[var(--border)]" : ""}`}
                     >
-                      <span className={`w-6 text-center font-black text-sm flex-shrink-0 ${p.rank === 1 ? "text-[#ffd700]" : p.rank === 2 ? "text-[#c0c0c0]" : "text-[#cd7f32]"}`}>
+                      <span
+                        className="w-6 text-center font-black text-sm flex-shrink-0"
+                        style={{ color: MEDAL[i] ?? "#565048" }}
+                      >
                         {p.rank}
                       </span>
                       <div
@@ -536,9 +554,11 @@ function CtaSection() {
   return (
     <section className="py-24 bg-[var(--bg-secondary)]">
       <div className="max-w-7xl mx-auto px-6">
-        <div className="relative overflow-hidden rounded-3xl p-10 sm:p-16 text-center bg-[linear-gradient(135deg,rgba(0,230,118,0.08)_0%,rgba(79,195,247,0.08)_50%,rgba(255,215,0,0.05)_100%)] border border-[rgba(0,230,118,0.2)]">
-          <div className="absolute -top-16 -left-16 w-64 h-64 rounded-full blur-3xl opacity-15 pointer-events-none bg-[#00e676]" />
-          <div className="absolute -bottom-16 -right-16 w-64 h-64 rounded-full blur-3xl opacity-10 pointer-events-none bg-[#4fc3f7]" />
+        {/* Gradient drapeau : vert → jaune → rouge */}
+        <div className="relative overflow-hidden rounded-3xl p-10 sm:p-16 text-center bg-[linear-gradient(135deg,rgba(0,196,74,0.08)_0%,rgba(255,204,0,0.07)_50%,rgba(230,48,48,0.06)_100%)] border border-[rgba(0,196,74,0.2)]">
+          <div className="absolute -top-16 -left-16 w-64 h-64 rounded-full blur-3xl opacity-[0.12] pointer-events-none bg-[#00c44a]" />
+          <div className="absolute -bottom-16 -right-16 w-64 h-64 rounded-full blur-3xl opacity-[0.10] pointer-events-none bg-[#e63030]" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full blur-3xl opacity-[0.08] pointer-events-none bg-[#ffcc00]" />
 
           <div className="relative z-10">
             <h2 className="text-3xl sm:text-4xl font-black mb-4 text-[var(--text-primary)]">
@@ -575,27 +595,27 @@ function Footer() {
     {
       title: "Plateforme",
       links: [
-        { href: "/tournaments", label: "Tournois"     },
-        { href: "/players",     label: "Joueurs"      },
-        { href: "/teams",       label: "Équipes"      },
-        { href: "/rankings",    label: "Classements"  },
+        { href: "/tournaments", label: "Tournois"    },
+        { href: "/players",     label: "Joueurs"     },
+        { href: "/teams",       label: "Équipes"     },
+        { href: "/rankings",    label: "Classements" },
       ],
     },
     {
       title: "Jeux",
       links: [
-        { href: "/games/valorant",        label: "Valorant"        },
-        { href: "/games/free-fire",       label: "Free Fire"       },
-        { href: "/games/fifa-25",         label: "FIFA 25"         },
-        { href: "/games/mobile-legends",  label: "Mobile Legends"  },
+        { href: "/games/valorant",       label: "Valorant"       },
+        { href: "/games/free-fire",      label: "Free Fire"      },
+        { href: "/games/fifa-25",        label: "FIFA 25"        },
+        { href: "/games/mobile-legends", label: "Mobile Legends" },
       ],
     },
     {
       title: "Informations",
       links: [
-        { href: "/news",    label: "Actualités"    },
-        { href: "/about",   label: "À propos"      },
-        { href: "/contact", label: "Contact"       },
+        { href: "/news",    label: "Actualités"     },
+        { href: "/about",   label: "À propos"       },
+        { href: "/contact", label: "Contact"        },
         { href: "/admin",   label: "Administration" },
       ],
     },
@@ -607,13 +627,13 @@ function Footer() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <span className="w-8 h-8 rounded-lg flex items-center justify-center text-[#09090f] font-black text-sm flex-shrink-0 bg-gradient-to-br from-[#00e676] to-[#4fc3f7]">
+              <span className="w-8 h-8 rounded-lg flex items-center justify-center text-[#09090f] font-black text-sm flex-shrink-0 bg-gradient-to-br from-[#00c44a] via-[#ffcc00] to-[#e63030]">
                 GP
               </span>
               <span className="font-bold text-lg">
-                <span className="text-[#00e676]">Game</span>
-                <span className="text-[#f0f0f8]">Pedia</span>
-                <span className="ml-1 text-xs text-[#ffd700]">TG</span>
+                <span className="text-[#00c44a]">Game</span>
+                <span className="text-[#f0ede6]">Pedia</span>
+                <span className="ml-1 text-xs text-[#ffcc00]">TG</span>
               </span>
             </div>
             <p className="text-sm leading-relaxed text-[var(--text-muted)]">
@@ -621,7 +641,7 @@ function Footer() {
               <br />
               Tournois, joueurs et classements.
             </p>
-            <div className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full bg-[rgba(0,230,118,0.08)] text-[#00e676] border border-[rgba(0,230,118,0.2)]">
+            <div className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full bg-[rgba(0,196,74,0.08)] text-[#00c44a] border border-[rgba(0,196,74,0.2)]">
               🇹🇬 Made in Togo
             </div>
           </div>
@@ -718,7 +738,7 @@ export default async function HomePage() {
       const entries = await db.rankingEntry.findMany({
         where: {
           gameId: game.id,
-          playerId: { not: null }, // classement individuel uniquement
+          playerId: { not: null },
           ...(activeSeason ? { seasonId: activeSeason.id } : {}),
         },
         orderBy: { rank: "asc" },
@@ -762,12 +782,12 @@ export default async function HomePage() {
   });
 
   const recentMatches: RecentMatchItem[] = rawMatches.map((m) => ({
-    id:               m.id,
-    endedAt:          m.endedAt,
-    stageName:        m.stage.name,
-    tournamentName:   m.stage.tournament.name,
-    tournamentSlug:   m.stage.tournament.slug,
-    participants:     m.participants.map((p) => ({
+    id:             m.id,
+    endedAt:        m.endedAt,
+    stageName:      m.stage.name,
+    tournamentName: m.stage.tournament.name,
+    tournamentSlug: m.stage.tournament.slug,
+    participants:   m.participants.map((p) => ({
       team:     p.team,
       score:    p.score,
       isWinner: p.isWinner,
