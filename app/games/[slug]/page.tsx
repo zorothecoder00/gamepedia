@@ -1,14 +1,31 @@
 "use client";
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import TierBadge from "../../components/TierBadge";
 import { useApi } from "@/hooks/useApi";
 
+// ─── Couleurs par slug (pas de champ color en base) ──────────
+const GAME_COLORS: Record<string, string> = {
+  "valorant":          "#e63030",
+  "free-fire":         "#ff8c00",
+  "fifa-25":           "#00c44a",
+  "mobile-legends":    "#ffcc00",
+  "cs2":               "#e3a04f",
+  "pubg-mobile":       "#f5c518",
+  "league-of-legends": "#c89b3c",
+};
+function getGameColor(slug: string) {
+  return GAME_COLORS[slug] ?? "#00c44a";
+}
+
+// ─── Types ────────────────────────────────────────────────────
+
 interface Game {
   id: string; slug: string; name: string; genre: string; format: string;
-  platforms: string[]; description: string; color: string; logoUrl: string | null;
+  platforms: string[]; description: string; logo: string | null;
   publisher?: string;
-  _count: { playerProfiles: number; tournaments: number };
+  _count: { playerProfiles: number; tournamentGames: number };
 }
 
 interface Tournament {
@@ -19,7 +36,7 @@ interface Tournament {
 }
 
 interface RankingEntry {
-  id: string; rank: number; points: number; wins: number;
+  id: string; rank: number; totalPoints: number; wins: number;
   player?: { pseudo: string; city?: string };
   team?: { name: string; tag: string; slug: string };
 }
@@ -29,8 +46,10 @@ interface Player { id: string; pseudo: string; city?: string; isVerified?: boole
 const TABS = ["Vue d'ensemble", "Classement", "Tournois", "Joueurs"];
 
 const STATUS_COLORS: Record<string, string> = {
-  UPCOMING: "var(--accent-blue)", ONGOING: "var(--accent-green)",
-  COMPLETED: "var(--text-muted)", CANCELLED: "var(--accent-red)",
+  UPCOMING:  "#ffcc00",
+  ONGOING:   "var(--accent-green)",
+  COMPLETED: "var(--text-muted)",
+  CANCELLED: "var(--accent-red)",
 };
 const STATUS_LABELS: Record<string, string> = {
   UPCOMING: "À venir", ONGOING: "En cours", COMPLETED: "Terminé", CANCELLED: "Annulé",
@@ -49,16 +68,16 @@ export default function GamePage({ params }: { params: { slug: string } }) {
   const [activeTab, setActiveTab] = useState(0);
   const { slug } = params;
 
-  const { data: game, loading: loadingGame } = useApi<Game>(`/api/games/${slug}`);
+  const { data: game, loading: loadingGame }         = useApi<Game>(`/api/games/${slug}`);
   const { data: tournaments, loading: loadingTournaments } = useApi<Tournament[]>(`/api/games/${slug}/tournaments`);
   const { data: rankings, loading: loadingRankings } = useApi<RankingEntry[]>(
     activeTab === 1 ? `/api/rankings/${slug}` : null, [activeTab],
   );
-  const { data: players, loading: loadingPlayers } = useApi<Player[]>(
+  const { data: players, loading: loadingPlayers }   = useApi<Player[]>(
     activeTab === 3 ? `/api/games/${slug}/players` : null, [activeTab],
   );
 
-  const color = game?.color ?? "var(--accent-blue)";
+  const color = game ? getGameColor(game.slug) : "#00c44a";
 
   if (loadingGame) {
     return <div className="max-w-[1280px] mx-auto my-16 text-center text-[var(--text-muted)]">Chargement...</div>;
@@ -68,38 +87,40 @@ export default function GamePage({ params }: { params: { slug: string } }) {
   }
 
   const completedTournaments = (tournaments ?? []).filter((t) => t.status === "COMPLETED");
-  const upcomingTournaments = (tournaments ?? []).filter((t) => t.status === "UPCOMING" || t.status === "ONGOING");
+  const upcomingTournaments  = (tournaments ?? []).filter((t) => t.status === "UPCOMING" || t.status === "ONGOING");
 
   return (
     <div>
       {/* Banner / Header */}
       <div
         className="border-b border-[var(--border)] px-6 pt-10 pb-6"
-        style={{ background: `linear-gradient(180deg, ${color}25 0%, var(--bg-primary) 100%)` }}
+        style={{ background: `linear-gradient(180deg, ${color}20 0%, var(--bg-primary) 100%)` }}
       >
         <div className="max-w-[1280px] mx-auto">
           <div className="flex items-end gap-6 flex-wrap">
             <div
-              className="w-20 h-20 rounded-2xl flex items-center justify-center text-[2.5rem] shrink-0"
-              style={{ background: `${color}22`, border: `2px solid ${color}55` }}
+              className="w-20 h-20 rounded-2xl flex items-center justify-center text-[2.5rem] shrink-0 overflow-hidden"
+              style={{ background: `${color}18`, border: `2px solid ${color}44` }}
             >
-              {game.logoUrl ? <img src={game.logoUrl} alt={game.name} className="w-14 h-14 object-contain" /> : "🎮"}
+              {game.logo
+                ? <Image src={game.logo} alt={game.name} width={56} height={56} className="object-contain" unoptimized />
+                : "🎮"}
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-3 flex-wrap mb-1">
                 <h1 className="text-[1.75rem] font-black text-[var(--text-primary)]">{game.name}</h1>
                 <span
                   className="text-[0.75rem] font-semibold px-2 py-0.5 rounded"
-                  style={{ background: `${color}22`, color, border: `1px solid ${color}44` }}
+                  style={{ background: `${color}18`, color, border: `1px solid ${color}40` }}
                 >
                   {game.genre}
                 </span>
               </div>
               <p className="text-[0.9rem] text-[var(--text-secondary)] mb-3">{game.description}</p>
               <div className="flex gap-6 flex-wrap">
-                <Stat label="Joueurs" value={game._count.playerProfiles} color={color} />
-                <Stat label="Tournois" value={game._count.tournaments} color="var(--accent-gold)" />
-                <Stat label="Format" value={game.format} color="var(--text-secondary)" />
+                <Stat label="Joueurs"  value={game._count.playerProfiles}  color={color} />
+                <Stat label="Tournois" value={game._count.tournamentGames} color="var(--accent-gold)" />
+                <Stat label="Format"   value={game.format}                 color="var(--text-secondary)" />
                 {game.publisher && <Stat label="Éditeur" value={game.publisher} color="var(--text-secondary)" />}
               </div>
             </div>
@@ -135,7 +156,7 @@ export default function GamePage({ params }: { params: { slug: string } }) {
           <div className="grid grid-cols-2 gap-8">
             {[
               { title: "Derniers résultats", items: completedTournaments.slice(0, 5), upcoming: false },
-              { title: "Tournois à venir", items: upcomingTournaments.slice(0, 5), upcoming: true },
+              { title: "Tournois à venir",   items: upcomingTournaments.slice(0, 5),  upcoming: true  },
             ].map(({ title, items, upcoming }) => (
               <div key={title}>
                 <h2 className="font-bold text-[1.1rem] text-[var(--text-primary)] mb-4">{title}</h2>
@@ -148,8 +169,8 @@ export default function GamePage({ params }: { params: { slug: string } }) {
                     {items.map((t) => (
                       <Link key={t.slug} href={`/tournaments/${t.slug}`} className="no-underline">
                         <div
-                          className="bg-[var(--bg-card)] rounded-lg px-4 py-3.5"
-                          style={{ border: upcoming ? `1px solid ${color}44` : "1px solid var(--border)" }}
+                          className="bg-[var(--bg-card)] rounded-lg px-4 py-3.5 hover:border-opacity-60 transition-colors"
+                          style={{ border: upcoming ? `1px solid ${color}40` : "1px solid var(--border)" }}
                         >
                           <div className="font-semibold text-sm text-[var(--text-primary)]">{t.name}</div>
                           <div className="text-[0.75rem] text-[var(--text-muted)] mt-1">
@@ -207,7 +228,7 @@ export default function GamePage({ params }: { params: { slug: string } }) {
                             <Link href={href} className="no-underline font-semibold text-[0.9rem] text-[var(--text-primary)] hover:underline">{name}</Link>
                             {city && <div className="text-[0.75rem] text-[var(--text-muted)]">{city}</div>}
                           </td>
-                          <td className="px-4 py-3.5 font-bold text-[var(--accent-gold)]">{entry.points.toLocaleString()}</td>
+                          <td className="px-4 py-3.5 font-bold text-[var(--accent-gold)]">{entry.totalPoints.toLocaleString()}</td>
                           <td className="px-4 py-3.5 text-sm text-[var(--text-secondary)]">{entry.wins}</td>
                         </tr>
                       );
@@ -268,8 +289,11 @@ export default function GamePage({ params }: { params: { slug: string } }) {
                   <Link key={p.pseudo} href={`/players/${p.pseudo}`} className="no-underline">
                     <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg p-4 flex items-center gap-3 hover:border-[var(--border-bright)] transition-colors">
                       <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 text-white"
-                        style={{ background: `linear-gradient(135deg, ${color}, var(--accent-blue))` }}
+                        className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0"
+                        style={{
+                          background: `linear-gradient(135deg, ${color}, var(--accent-gold))`,
+                          color: "#09090f",
+                        }}
                       >
                         {p.pseudo.slice(0, 2).toUpperCase()}
                       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, startTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -42,8 +42,10 @@ interface PalmaresEntry {
 const TABS = ["Mon profil", "Palmarès", "Achievements", "Paramètres"];
 
 const RARITY_COLORS: Record<string, string> = {
-  Commun: "text-[var(--text-muted)]", Rare: "text-[var(--accent-blue)]",
-  Épique: "text-[var(--tier-a)]", Légendaire: "text-[var(--accent-gold)]",
+  Commun:     "text-[var(--text-muted)]",
+  Rare:       "text-[var(--accent-green)]",
+  Épique:     "text-[var(--tier-a)]",
+  Légendaire: "text-[var(--accent-gold)]",
 };
 
 const placementIcon = (p: number) => p === 1 ? "🥇" : p === 2 ? "🥈" : p === 3 ? "🥉" : `#${p}`;
@@ -91,10 +93,12 @@ function FormInput({ label, value, onChange, type = "text", readOnly = false }: 
 // ─── Page principale ──────────────────────────────────────────
 
 export default function ProfilePage() {
-  const router = useRouter();
+  const router   = useRouter();
   const [activeTab, setActiveTab] = useState(0);
-  const [token, setToken] = useState<string | null>(null);
-  const [settings, setSettings] = useState({
+  const [token, setToken]         = useState<string | null>(() =>
+    typeof window !== "undefined" ? localStorage.getItem("gp_token") : null
+  );
+  const [settings, setSettings]   = useState({
     username: "", email: "", bio: "",
     twitter: "", discord: "", youtube: "",
   });
@@ -102,18 +106,16 @@ export default function ProfilePage() {
 
   const buildSettings = (meData: Me, playerData: Player) => ({
     username: meData.username ?? "",
-    email: meData.email ?? "",
-    bio: playerData.bio ?? "",
-    twitter: playerData.socialLinks?.twitter ?? "",
-    discord: playerData.socialLinks?.discord ?? "",
-    youtube: playerData.socialLinks?.youtube ?? "",
+    email:    meData.email ?? "",
+    bio:      playerData.bio ?? "",
+    twitter:  playerData.socialLinks?.twitter ?? "",
+    discord:  playerData.socialLinks?.discord ?? "",
+    youtube:  playerData.socialLinks?.youtube ?? "",
   });
 
   useEffect(() => {
-    const t = localStorage.getItem("gp_token");
-    if (!t) { router.push("/auth/login"); return; }
-    setToken(t);
-  }, [router]);
+    if (!token) router.push("/auth/login");
+  }, [token, router]);
 
   const authHeader = token ? { Authorization: `Bearer ${token}` } : undefined;
 
@@ -142,10 +144,8 @@ export default function ProfilePage() {
   useEffect(() => {
     if (me && player && !settingsInitialized.current) {
       settingsInitialized.current = true;
-      setSettings(buildSettings(me, player));
+      startTransition(() => setSettings(buildSettings(me, player)));
     }
-  // buildSettings is stable (defined in render scope, no deps change it)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [me, player]);
 
   const handleSave = async () => {
@@ -178,16 +178,19 @@ export default function ProfilePage() {
     );
   }
 
-  const team = player?.teamMembers?.[0]?.team ?? null;
-  const games = player?.gameProfiles ?? [];
+  const team         = player?.teamMembers?.[0]?.team ?? null;
+  const games        = player?.gameProfiles ?? [];
   const achievements = player?.achievements ?? [];
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
-      {/* Banner */}
-      <div className="relative h-40 overflow-hidden bg-gradient-to-br from-[#1a1a35] to-[#0d0d20]">
-        <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(0,230,118,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(0,230,118,0.07)_1px,transparent_1px)] [background-size:40px_40px]" />
-        <span className="absolute top-3 right-4 text-xs font-semibold px-3 py-1 rounded-full bg-[rgba(0,230,118,0.1)] border border-[rgba(0,230,118,0.25)] text-[var(--accent-green)]">
+      {/* Banner — tons chauds drapeau togolais */}
+      <div className="relative h-40 overflow-hidden bg-gradient-to-br from-[#141208] to-[#0d0d09]">
+        <div className="absolute inset-0 opacity-[0.18] [background-image:linear-gradient(rgba(0,196,74,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(0,196,74,0.06)_1px,transparent_1px)] [background-size:40px_40px]" />
+        {/* Halos drapeau */}
+        <div className="absolute top-0 left-1/4 w-32 h-32 rounded-full blur-3xl opacity-[0.15] pointer-events-none bg-[#00c44a]" />
+        <div className="absolute top-0 right-1/4 w-32 h-32 rounded-full blur-3xl opacity-[0.12] pointer-events-none bg-[#e63030]" />
+        <span className="absolute top-3 right-4 text-xs font-semibold px-3 py-1 rounded-full bg-[rgba(0,196,74,0.1)] border border-[rgba(0,196,74,0.25)] text-[var(--accent-green)]">
           Mon espace
         </span>
       </div>
@@ -196,8 +199,13 @@ export default function ProfilePage() {
       <div className="bg-[var(--bg-secondary)] border-b border-[var(--border)]">
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-wrap items-end gap-5 -mt-11 pb-5">
+            {/* Avatar — gradient drapeau vert → or */}
             <div
-              className="w-20 h-20 rounded-full flex items-center justify-center text-black font-black text-3xl shrink-0 relative bg-gradient-to-br from-[var(--accent-green)] to-[var(--accent-blue)] border-[3px] border-[var(--bg-secondary)]"
+              className="w-20 h-20 rounded-full flex items-center justify-center font-black text-3xl shrink-0 relative border-[3px] border-[var(--bg-secondary)]"
+              style={{
+                background: "linear-gradient(135deg, var(--accent-green), var(--accent-gold))",
+                color: "#09090f",
+              }}
             >
               {(pseudo || me.username).slice(0, 2).toUpperCase()}
               <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-[var(--accent-green)] border-2 border-[var(--bg-secondary)]" />
@@ -206,9 +214,11 @@ export default function ProfilePage() {
             <div className="flex-1 pt-12">
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 <h1 className="text-2xl font-black text-[var(--text-primary)]">{pseudo || me.username}</h1>
-                {player?.isVerified && <span className="text-[var(--accent-blue)]" title="Vérifié">✓</span>}
+                {player?.isVerified && (
+                  <span className="text-[var(--accent-green)]" title="Vérifié">✓</span>
+                )}
                 <span>🇹🇬</span>
-                <span className="text-[0.65rem] font-bold px-2 py-0.5 rounded bg-[rgba(0,230,118,0.1)] border border-[rgba(0,230,118,0.2)] text-[var(--accent-green)]">
+                <span className="text-[0.65rem] font-bold px-2 py-0.5 rounded bg-[rgba(0,196,74,0.1)] border border-[rgba(0,196,74,0.2)] text-[var(--accent-green)]">
                   {me.role}
                 </span>
               </div>
@@ -221,7 +231,7 @@ export default function ProfilePage() {
                 {games.map((g) => <GameTag key={g.game.slug} name={g.game.name} />)}
                 {team && (
                   <Link href={`/teams/${team.slug}`}>
-                    <span className="text-[0.68rem] font-bold px-2 py-0.5 rounded bg-[rgba(255,215,0,0.12)] border border-[rgba(255,215,0,0.25)] text-[var(--accent-gold)]">
+                    <span className="text-[0.68rem] font-bold px-2 py-0.5 rounded bg-[rgba(255,204,0,0.12)] border border-[rgba(255,204,0,0.25)] text-[var(--accent-gold)]">
                       [{team.tag}] {team.name}
                     </span>
                   </Link>
@@ -244,10 +254,10 @@ export default function ProfilePage() {
 
           {/* Stats */}
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 pb-5">
-            <StatCard label="Points" value={(player?.totalPoints ?? 0).toLocaleString("fr-FR")} color="text-[var(--accent-gold)]" />
-            <StatCard label="Tournois" value={player?.tournamentsPlayed ?? 0} color="text-[var(--accent-blue)]" />
-            <StatCard label="Victoires" value={player?.wins ?? 0} color="text-[var(--accent-green)]" />
-            <StatCard label="Top 3" value={player?.top3 ?? 0} color="text-[var(--tier-a)]" />
+            <StatCard label="Points"      value={(player?.totalPoints ?? 0).toLocaleString("fr-FR")} color="text-[var(--accent-gold)]"  />
+            <StatCard label="Tournois"    value={player?.tournamentsPlayed ?? 0}                     color="text-[var(--accent-green)]" />
+            <StatCard label="Victoires"   value={player?.wins ?? 0}                                  color="text-[var(--accent-green)]" />
+            <StatCard label="Top 3"       value={player?.top3 ?? 0}                                  color="text-[var(--tier-a)]"       />
             <StatCard label="Prize money" value={player?.prizeMoney ? `${((player.prizeMoney) / 1000).toFixed(0)}K XOF` : "0 XOF"} color="text-[var(--accent-gold)]" />
           </div>
 
@@ -292,7 +302,7 @@ export default function ProfilePage() {
                           {g.inGameName && <p className="text-xs text-[var(--text-muted)]">{g.inGameName}</p>}
                         </div>
                         {g.rank && (
-                          <span className="text-xs font-semibold px-2 py-0.5 rounded bg-[rgba(79,195,247,0.1)] border border-[rgba(79,195,247,0.25)] text-[var(--accent-blue)]">
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded bg-[rgba(0,196,74,0.1)] border border-[rgba(0,196,74,0.25)] text-[var(--accent-green)]">
                             {g.rank}
                           </span>
                         )}
@@ -310,7 +320,7 @@ export default function ProfilePage() {
                     {Object.entries(player.socialLinks).filter(([, v]) => v).map(([key, val]) => (
                       <div key={key} className="flex gap-3 items-center">
                         <span className="text-xs text-[var(--text-muted)] w-16 capitalize">{key}</span>
-                        <span className="text-xs text-[var(--accent-blue)]">{val}</span>
+                        <span className="text-xs text-[var(--text-secondary)]">{val}</span>
                       </div>
                     ))}
                   </div>
@@ -320,7 +330,7 @@ export default function ProfilePage() {
                 <SectionBlock title="Équipe actuelle">
                   <Link href={`/teams/${team.slug}`}>
                     <div className="flex items-center gap-3 p-3.5 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] hover:border-[var(--border-bright)] transition-colors">
-                      <div className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-black bg-[rgba(255,215,0,0.15)] text-[var(--accent-gold)]">
+                      <div className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-black bg-[rgba(255,204,0,0.15)] text-[var(--accent-gold)]">
                         {team.tag}
                       </div>
                       <div>
@@ -335,7 +345,7 @@ export default function ProfilePage() {
                 <div className="space-y-2">
                   <button
                     onClick={() => setActiveTab(3)}
-                    className="block w-full text-center py-2.5 rounded-lg text-sm font-semibold text-black cursor-pointer hover:opacity-90 transition-opacity bg-[var(--accent-green)]"
+                    className="block w-full text-center py-2.5 rounded-lg text-sm font-semibold cursor-pointer hover:opacity-90 transition-opacity bg-[var(--accent-green)] text-[#09090f]"
                   >
                     Modifier mon profil
                   </button>
@@ -420,26 +430,26 @@ export default function ProfilePage() {
         {activeTab === 3 && (
           <div className="max-w-xl">
             <SectionBlock title="Informations personnelles">
-              <FormInput label="Pseudo" value={settings.username} onChange={(v) => setSettings((s) => ({ ...s, username: v }))} />
-              <FormInput label="Biographie" value={settings.bio} onChange={(v) => setSettings((s) => ({ ...s, bio: v }))} />
+              <FormInput label="Pseudo"      value={settings.username} onChange={(v) => setSettings((s) => ({ ...s, username: v }))} />
+              <FormInput label="Biographie"  value={settings.bio}      onChange={(v) => setSettings((s) => ({ ...s, bio: v }))} />
             </SectionBlock>
 
             <SectionBlock title="Compte">
               <FormInput label="Email" value={settings.email} onChange={(v) => setSettings((s) => ({ ...s, email: v }))} type="email" />
-              <FormInput label="Rôle" value={me.role} readOnly />
+              <FormInput label="Rôle"  value={me.role} readOnly />
             </SectionBlock>
 
             <SectionBlock title="Réseaux sociaux">
-              <FormInput label="Twitter / X" value={settings.twitter} onChange={(v) => setSettings((s) => ({ ...s, twitter: v }))} />
-              <FormInput label="Discord" value={settings.discord} onChange={(v) => setSettings((s) => ({ ...s, discord: v }))} />
-              <FormInput label="YouTube" value={settings.youtube} onChange={(v) => setSettings((s) => ({ ...s, youtube: v }))} />
+              <FormInput label="Twitter / X" value={settings.twitter}  onChange={(v) => setSettings((s) => ({ ...s, twitter: v }))} />
+              <FormInput label="Discord"     value={settings.discord}  onChange={(v) => setSettings((s) => ({ ...s, discord: v }))} />
+              <FormInput label="YouTube"     value={settings.youtube}  onChange={(v) => setSettings((s) => ({ ...s, youtube: v }))} />
             </SectionBlock>
 
             <div className="flex gap-3 mt-2">
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex-1 py-3 rounded-lg text-sm font-bold text-black hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed bg-[var(--accent-green)]"
+                className="flex-1 py-3 rounded-lg text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed bg-[var(--accent-green)] text-[#09090f]"
               >
                 {saving ? "Enregistrement..." : "Enregistrer"}
               </button>
@@ -451,12 +461,12 @@ export default function ProfilePage() {
               </button>
             </div>
 
-            <div className="mt-10 p-5 rounded-xl border border-[rgba(255,68,68,0.25)] bg-[rgba(255,68,68,0.04)]">
+            <div className="mt-10 p-5 rounded-xl border border-[rgba(230,48,48,0.25)] bg-[rgba(230,48,48,0.04)]">
               <h4 className="text-sm font-bold text-[var(--accent-red)] mb-1">Zone dangereuse</h4>
               <p className="text-xs text-[var(--text-muted)] mb-4">
                 La suppression de votre compte est irréversible. Toutes vos données seront perdues.
               </p>
-              <button className="px-4 py-2 rounded-lg text-xs font-semibold border border-[rgba(255,68,68,0.4)] text-[var(--accent-red)] hover:bg-[rgba(255,68,68,0.08)] transition-colors cursor-pointer">
+              <button className="px-4 py-2 rounded-lg text-xs font-semibold border border-[rgba(230,48,48,0.4)] text-[var(--accent-red)] hover:bg-[rgba(230,48,48,0.08)] transition-colors cursor-pointer">
                 Supprimer mon compte
               </button>
             </div>
