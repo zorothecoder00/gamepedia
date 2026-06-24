@@ -1,7 +1,19 @@
 import { NextResponse } from "next/server";
+import { WagerError } from "./wagers";
 
 export function ok<T>(data: T, status = 200) {
   return NextResponse.json({ data }, { status });
+}
+
+/**
+ * Convertit une erreur en réponse HTTP. Une WagerError est mappée sur
+ * son statut métier (400/403/409…), tout le reste sur une 500 générique.
+ */
+export function handleApiError(e: unknown) {
+  if (e instanceof WagerError) {
+    return NextResponse.json({ error: e.message }, { status: e.status });
+  }
+  return serverError();
 }
 
 export function paginated<T>(

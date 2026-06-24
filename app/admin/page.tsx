@@ -54,6 +54,7 @@ const ADMIN_SECTIONS = [
   { href: "/admin/rankings",    label: "Classements",       description: "Saisons, recalcul des points",           icon: "📊", countKey: null },
   { href: "/admin/point-rules", label: "Règles de points",  description: "Par jeu, tier et placement",             icon: "⚙️", countKey: null },
   { href: "/admin/articles",    label: "Articles",          description: "Rédiger, publier, dépublier",            icon: "📰", countKey: "articles"    as const },
+  { href: "/admin/disputes",    label: "Litiges paris",     description: "Arbitrer les défis contestés",           icon: "⚖️", countKey: null },
   { href: "/admin/users",       label: "Utilisateurs",      description: "Rôles et accès",                         icon: "🔑", countKey: "users"       as const },
 ];
 

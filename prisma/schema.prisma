@@ -7,7 +7,7 @@ generator client {
   provider = "prisma-client-js"
 }
 
-datasource db {  
+datasource db {
   provider = "postgresql"
 }
 
@@ -24,13 +24,13 @@ enum Role {
 
 /// Format de jeu principal
 enum GameFormat {
-  FIVE_VS_FIVE    // Valorant, CS2, League of Legends
-  ONE_VS_ONE      // FIFA, Tennis esport
+  FIVE_VS_FIVE // Valorant, CS2, League of Legends
+  ONE_VS_ONE // FIFA, Tennis esport
   TWO_VS_TWO
   FOUR_VS_FOUR
-  BATTLE_ROYALE   // PUBG Mobile, Free Fire
-  MOBA            // Mobile Legends, Dota 2
-  FREE_FOR_ALL    // Racing, battle royale solo
+  BATTLE_ROYALE // PUBG Mobile, Free Fire
+  MOBA // Mobile Legends, Dota 2
+  FREE_FOR_ALL // Racing, battle royale solo
 }
 
 /// Format du tournoi
@@ -61,7 +61,7 @@ enum MatchStatus {
   SCHEDULED
   ONGOING
   COMPLETED
-  FORFEITED  // Forfait
+  FORFEITED // Forfait
   CANCELLED
 }
 
@@ -102,10 +102,61 @@ enum NotificationType {
   INFO
   SUCCESS
   WARNING
-  TOURNAMENT  // Inscription confirmée, résultats, etc.
-  MATCH       // Match programmé, résultat
+  TOURNAMENT // Inscription confirmée, résultats, etc.
+  MATCH // Match programmé, résultat
   ACHIEVEMENT // Badge débloqué
-  SYSTEM      // Message système / maintenance
+  SYSTEM // Message système / maintenance
+  WAGER // Défi/pari : accepté, dépôt à faire, résultat, paiement
+}
+
+// ============================================================
+// PARIS ENTRE JOUEURS (DÉFIS)
+// ============================================================
+
+/// Cycle de vie d'un défi/pari entre deux joueurs.
+/// Modèle escrow : les deux joueurs déposent leur mise sur le compte
+/// de l'admin, qui reverse le total (moins commission) au vainqueur.
+enum WagerStatus {
+  OPEN // créé, en attente d'un adversaire
+  ACCEPTED // adversaire rejoint, accord des termes en attente
+  AWAITING_DEPOSITS // termes acceptés, chaque joueur doit déposer sa mise
+  ONGOING // les deux dépôts confirmés par l'admin, match en cours
+  AWAITING_RESULT // match fini, en attente des déclarations
+  RESULT_REPORTED // un seul joueur a déclaré le résultat
+  DISPUTED // déclarations contradictoires → modération
+  AWAITING_PAYOUT // vainqueur déterminé, l'admin doit reverser les fonds
+  SETTLED // versement effectué, défi clôturé
+  CANCELLED // annulé (avant les dépôts) ou remboursé
+  EXPIRED // non accepté avant la date limite
+}
+
+/// Visibilité d'un défi dans le lobby
+enum WagerVisibility {
+  PUBLIC // visible par tous dans le lobby
+  PRIVATE // sur invitation directe uniquement
+}
+
+/// Moyen de paiement (compte admin ou coordonnées de réception d'un joueur)
+enum PaymentMethodType {
+  MOBILE_MONEY // Moov Money, T-Money (Togocom)
+  BANK_CARD
+  WESTERN_UNION
+  BANK_TRANSFER
+  OTHER
+}
+
+/// État d'un dépôt de mise vers le compte de l'admin
+enum DepositStatus {
+  PENDING // joueur déclare avoir envoyé, en attente de vérif admin
+  CONFIRMED // admin a vérifié la réception
+  REFUNDED // remboursé (défi annulé)
+}
+
+/// État d'un litige sur un défi
+enum DisputeStatus {
+  OPEN
+  RESOLVED
+  REJECTED
 }
 
 // ============================================================
@@ -113,16 +164,16 @@ enum NotificationType {
 // ============================================================
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  username     String   @unique
+  id           String    @id @default(cuid())
+  email        String    @unique
+  username     String    @unique
   passwordHash String
-  role         Role     @default(VISITOR)
+  role         Role      @default(VISITOR)
   avatar       String?
-  isActive     Boolean  @default(true)
+  isActive     Boolean   @default(true)
   lastLoginAt  DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   player Player?
 
@@ -138,19 +189,19 @@ model User {
 // ============================================================
 
 model Player {
-  id        String  @id @default(cuid())
-  userId    String? @unique
-  user      User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id     String  @id @default(cuid())
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   // Identité
-  pseudo     String  @unique
-  firstName  String?
-  lastName   String?
-  birthDate  DateTime?
+  pseudo    String    @unique
+  firstName String?
+  lastName  String?
+  birthDate DateTime?
 
   // Localisation
-  city       String? // Lomé, Kara, Sokodé, Atakpamé...
-  region     String? // Maritime, Centrale, Savanes...
+  city   String? // Lomé, Kara, Sokodé, Atakpamé...
+  region String? // Maritime, Centrale, Savanes...
 
   // Profil public
   bio         String?
@@ -165,18 +216,36 @@ model Player {
   // Nationalité (pour évolution future multi-pays)
   nationality String @default("TG")
 
+  // --- Paris entre joueurs ---
+  wagersPlayed     Int     @default(0) // défis joués (dépôts confirmés)
+  wagersWon        Int     @default(0) // défis remportés
+  paymentDefaults  Int     @default(0) // dépôts annoncés mais jamais reçus
+  trustScore       Int     @default(100) // sert de filtre anti-mauvais payeur
+  acceptedWagerCgu Boolean @default(false) // CGU spécifiques aux paris
+  isAdult          Boolean @default(false) // déclaration 18+
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  gameProfiles              PlayerGameProfile[]
-  teamMemberships           TeamMember[]
-  matchPerformances         PlayerMatchPerformance[]
-  rankingEntries            RankingEntry[]
-  achievements              PlayerAchievement[]
-  soloTournamentEntries     TournamentParticipant[]  @relation("SoloParticipant")
-  pointAttributions         PointAttribution[]       @relation("PlayerPointAttribution")
-  suspensions               Suspension[]
+  gameProfiles          PlayerGameProfile[]
+  teamMemberships       TeamMember[]
+  matchPerformances     PlayerMatchPerformance[]
+  rankingEntries        RankingEntry[]
+  achievements          PlayerAchievement[]
+  soloTournamentEntries TournamentParticipant[]  @relation("SoloParticipant")
+  pointAttributions     PointAttribution[]       @relation("PlayerPointAttribution")
+  suspensions           Suspension[]
+
+  // Relations paris
+  payoutMethods    PlayerPayoutMethod[]
+  wagersChallenged Wager[]              @relation("WagerChallenger")
+  wagersOpposed    Wager[]              @relation("WagerOpponent")
+  wagersWonRel     Wager[]              @relation("WagerWinner")
+  wagerDeposits    WagerDeposit[]
+  wagerReports     WagerReport[]
+  disputesOpened   WagerDispute[]       @relation("DisputeOpener")
+  payoutsReceived  WagerPayout[]        @relation("PayoutRecipient")
 
   @@map("players")
 }
@@ -192,7 +261,7 @@ model PlayerGameProfile {
   inGameName String? // Pseudo in-game (peut être différent du pseudo principal)
   rank       String? // Rang dans le jeu (Radiant, Predator, Global Elite...)
   server     String? // Serveur de jeu (EU, AS, AFR...)
-  extraData  Json?   // Données supplémentaires spécifiques au jeu
+  extraData  Json? // Données supplémentaires spécifiques au jeu
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -227,11 +296,12 @@ model Game {
   updatedAt DateTime @updatedAt
 
   // Relations
-  playerProfiles    PlayerGameProfile[]
-  tournamentGames   TournamentGame[]
-  rankingEntries    RankingEntry[]
-  pointRules        PointRule[]
-  seasons           Season[]
+  playerProfiles  PlayerGameProfile[]
+  tournamentGames TournamentGame[]
+  rankingEntries  RankingEntry[]
+  pointRules      PointRule[]
+  seasons         Season[]
+  wagers          Wager[]
 
   @@map("games")
 }
@@ -262,9 +332,9 @@ model Team {
 
   // Relations
   members                  TeamMember[]
-  tournamentParticipations TournamentParticipant[]  @relation("TeamParticipant")
+  tournamentParticipations TournamentParticipant[] @relation("TeamParticipant")
   matchParticipations      MatchParticipant[]
-  pointAttributions        PointAttribution[]       @relation("TeamPointAttribution")
+  pointAttributions        PointAttribution[]      @relation("TeamPointAttribution")
   rankingEntries           RankingEntry[]
   suspensions              Suspension[]
 
@@ -279,9 +349,9 @@ model TeamMember {
   player   Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
   role     String? // "IGL", "Entry Fragger", "Support", "Coach", "Manager"
-  joinedAt DateTime @default(now())
+  joinedAt DateTime  @default(now())
   leftAt   DateTime?
-  isActive Boolean  @default(true)
+  isActive Boolean   @default(true)
 
   @@unique([teamId, playerId, joinedAt])
   @@map("team_members")
@@ -309,9 +379,9 @@ model Tournament {
   tier TournamentTier @default(C)
 
   // Localisation & dates
-  location             String?  // "Lomé, Togo" | "En ligne"
-  venue                String?  // Nom de la salle/lieu précis
-  isOnline             Boolean  @default(false)
+  location             String? // "Lomé, Togo" | "En ligne"
+  venue                String? // Nom de la salle/lieu précis
+  isOnline             Boolean   @default(false)
   startDate            DateTime
   endDate              DateTime?
   registrationDeadline DateTime?
@@ -340,10 +410,10 @@ model Tournament {
   updatedAt DateTime @updatedAt
 
   // Relations
-  games              TournamentGame[]
-  participants       TournamentParticipant[]
-  stages             TournamentStage[]
-  pointAttributions  PointAttribution[]
+  games             TournamentGame[]
+  participants      TournamentParticipant[]
+  stages            TournamentStage[]
+  pointAttributions PointAttribution[]
 
   @@map("tournaments")
 }
@@ -374,11 +444,11 @@ model TournamentParticipant {
   // Résultat final
   finalPlacement Int? // 1er, 2ème, 3ème...
   isEliminated   Boolean @default(false)
-  prizeWon       Float?  // Montant gagné
+  prizeWon       Float? // Montant gagné
 
   // Inscription
-  seed        Int? // Tête de série
-  isConfirmed Boolean  @default(false)
+  seed         Int? // Tête de série
+  isConfirmed  Boolean  @default(false)
   registeredAt DateTime @default(now())
 
   @@unique([tournamentId, teamId])
@@ -396,9 +466,9 @@ model TournamentStage {
   tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
 
   name        String // "Phase de groupes", "Quarts de finale", "Finale"
-  stageNumber Int    // Ordre d'exécution : 1, 2, 3...
+  stageNumber Int // Ordre d'exécution : 1, 2, 3...
   format      TournamentFormat
-  bestOf      Int      @default(1) // BO1, BO3, BO5
+  bestOf      Int              @default(1) // BO1, BO3, BO5
 
   startDate DateTime?
   endDate   DateTime?
@@ -446,9 +516,9 @@ model MatchParticipant {
   teamId String?
   team   Team?   @relation(fields: [teamId], references: [id])
 
-  score    Int?     // Score final (rounds gagnés, buts marqués, kills...)
-  isWinner Boolean?
-  isForfeit Boolean @default(false)
+  score     Int? // Score final (rounds gagnés, buts marqués, kills...)
+  isWinner  Boolean?
+  isForfeit Boolean  @default(false)
 
   @@unique([matchId, teamId])
   @@map("match_participants")
@@ -468,8 +538,8 @@ model PlayerMatchPerformance {
   // Exemple Free Fire: { kills, damage, survivalTime, placement }
   stats Json
 
-  isMvp   Boolean @default(false)
-  teamId  String? // Équipe du joueur lors de ce match
+  isMvp  Boolean @default(false)
+  teamId String? // Équipe du joueur lors de ce match
 
   @@unique([matchId, playerId])
   @@map("player_match_performances")
@@ -482,12 +552,12 @@ model PlayerMatchPerformance {
 /// Une saison délimite une période de compétition pour un jeu donné.
 /// Les points accumulés pendant une saison définissent le classement saisonnier.
 model Season {
-  id     String  @id @default(cuid())
-  gameId String
-  game   Game    @relation(fields: [gameId], references: [id])
-  name   String // "Saison 1 - 2025", "Hivernale 2025"
-  year   Int
-  quarter Int?  // 1, 2, 3, 4 (optionnel — saisons trimestrielles)
+  id      String @id @default(cuid())
+  gameId  String
+  game    Game   @relation(fields: [gameId], references: [id])
+  name    String // "Saison 1 - 2025", "Hivernale 2025"
+  year    Int
+  quarter Int? // 1, 2, 3, 4 (optionnel — saisons trimestrielles)
 
   startDate DateTime
   endDate   DateTime?
@@ -514,9 +584,9 @@ model PointRule {
   season   Season? @relation(fields: [seasonId], references: [id])
 
   // Condition
-  placement     Int            // 1 = 1er, 2 = 2ème, etc.
+  placement     Int // 1 = 1er, 2 = 2ème, etc.
   tier          TournamentTier // Tier du tournoi auquel cette règle s'applique
-  pointsAwarded Int            // Points de base attribués
+  pointsAwarded Int // Points de base attribués
 
   // Multiplicateur selon le format
   // Ex : BO5 Finale = x1.5
@@ -542,11 +612,11 @@ model PointAttribution {
   playerId String?
   player   Player? @relation("PlayerPointAttribution", fields: [playerId], references: [id])
 
-  placement    Int
-  basePoints   Int
-  multiplier   Float @default(1.0)
-  finalPoints  Int   // basePoints × multiplier, arrondi
-  prizeWon     Float?
+  placement   Int
+  basePoints  Int
+  multiplier  Float  @default(1.0)
+  finalPoints Int // basePoints × multiplier, arrondi
+  prizeWon    Float?
 
   note      String? // Explication manuelle si besoin
   createdAt DateTime @default(now())
@@ -569,16 +639,16 @@ model RankingEntry {
   team     Team?   @relation(fields: [teamId], references: [id])
 
   // Cumuls
-  totalPoints      Int   @default(0)
-  totalPrizeMoney  Float @default(0)
-  tournamentsPlayed Int  @default(0)
-  wins             Int   @default(0)     // Tournois gagnés
-  top3Finishes     Int   @default(0)
-  averagePlacement Float?
+  totalPoints       Int    @default(0)
+  totalPrizeMoney   Float  @default(0)
+  tournamentsPlayed Int    @default(0)
+  wins              Int    @default(0) // Tournois gagnés
+  top3Finishes      Int    @default(0)
+  averagePlacement  Float?
 
   // Position calculée (mis à jour périodiquement)
-  rank      Int?
-  prevRank  Int? // Classement précédent (pour afficher +/- de mouvement)
+  rank     Int?
+  prevRank Int? // Classement précédent (pour afficher +/- de mouvement)
 
   updatedAt DateTime @updatedAt
 
@@ -611,8 +681,8 @@ model PlayerAchievement {
   achievementId String
   achievement   Achievement @relation(fields: [achievementId], references: [id])
 
-  awardedAt   DateTime @default(now())
-  context     String?  // Ex: "Champion Valorant Cup Lomé 2025"
+  awardedAt    DateTime @default(now())
+  context      String? // Ex: "Champion Valorant Cup Lomé 2025"
   tournamentId String?
 
   @@unique([playerId, achievementId])
@@ -624,21 +694,21 @@ model PlayerAchievement {
 // ============================================================
 
 model Article {
-  id        String  @id @default(cuid())
-  title     String
-  slug      String  @unique
-  excerpt   String?
-  content   String  // Markdown
+  id         String  @id @default(cuid())
+  title      String
+  slug       String  @unique
+  excerpt    String?
+  content    String // Markdown
   coverImage String?
 
-  authorId  String?
+  authorId   String?
   // Pas de FK forte vers User pour flexibilité
   authorName String?
 
   // Tags
-  tags    String[] // ["valorant", "tournoi", "lomé"]
+  tags String[] // ["valorant", "tournoi", "lomé"]
 
-  isPublished Boolean  @default(false)
+  isPublished Boolean   @default(false)
   publishedAt DateTime?
 
   createdAt DateTime @default(now())
@@ -665,7 +735,7 @@ model AuditLog {
 
   // Entité cible
   entityType AuditEntity
-  entityId   String  // ID de l'entité concernée
+  entityId   String // ID de l'entité concernée
   entityName String? // Nom dénormalisé pour affichage sans JOIN (ex: "Togo Valorant Open S3")
 
   // Détails supplémentaires (champs modifiés, valeurs avant/après, etc.)
@@ -695,8 +765,8 @@ model Notification {
   // Lien de redirection (ex: "/tournaments/valorant-open-s3")
   link String?
 
-  isRead   Boolean  @default(false)
-  readAt   DateTime?
+  isRead Boolean   @default(false)
+  readAt DateTime?
 
   createdAt DateTime @default(now())
 
@@ -721,13 +791,13 @@ model Suspension {
   suspendedById String?
   suspendedBy   User?   @relation("SuspendedBy", fields: [suspendedById], references: [id], onDelete: SetNull)
 
-  reason    String  // Motif obligatoire
-  startsAt  DateTime @default(now())
-  endsAt    DateTime? // null = suspendu indéfiniment
-  isActive  Boolean  @default(true) // false une fois la période expirée ou levée manuellement
+  reason   String // Motif obligatoire
+  startsAt DateTime  @default(now())
+  endsAt   DateTime? // null = suspendu indéfiniment
+  isActive Boolean   @default(true) // false une fois la période expirée ou levée manuellement
 
   // Levée anticipée
-  liftedAt  DateTime?
+  liftedAt   DateTime?
   liftReason String?
 
   createdAt DateTime @default(now())
@@ -736,4 +806,188 @@ model Suspension {
   @@index([playerId, isActive])
   @@index([teamId, isActive])
   @@map("suspensions")
+}
+
+// ============================================================
+// PARIS ENTRE JOUEURS (DÉFIS) — MODÈLES
+// ============================================================
+
+/// Compte de paiement de l'admin/plateforme : les coordonnées que
+/// les DEUX joueurs voient pour y déposer leur mise (escrow).
+/// Plusieurs comptes possibles (Mobile Money, Western Union, etc.).
+model PlatformPaymentAccount {
+  id           String            @id @default(cuid())
+  type         PaymentMethodType
+  label        String // "Moov Money GamePedia", "Western Union admin"
+  /// Coordonnées affichées au joueur. Ex Mobile Money : { phone, operator, holderName }
+  /// Western Union : { receiverName, city, country }
+  details      Json
+  instructions String? // consignes (ex : "mettre votre pseudo en référence")
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@map("platform_payment_accounts")
+}
+
+/// Coordonnées qu'un joueur enregistre pour RECEVOIR ses gains de l'admin.
+/// Visibles par l'admin uniquement (pour effectuer le versement au vainqueur).
+model PlayerPayoutMethod {
+  id       String @id @default(cuid())
+  playerId String
+  player   Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  type    PaymentMethodType
+  label   String // "Mon Moov Money"
+  details Json // { phone, operator } | { receiverName, city, country } ...
+
+  isDefault Boolean @default(false)
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([playerId, isActive])
+  @@map("player_payout_methods")
+}
+
+/// Un défi/pari entre deux joueurs d'un même jeu.
+model Wager {
+  id     String @id @default(cuid())
+  gameId String
+  game   Game   @relation(fields: [gameId], references: [id]) // filtrage par jeu
+
+  challengerId String
+  challenger   Player  @relation("WagerChallenger", fields: [challengerId], references: [id])
+  opponentId   String?
+  opponent     Player? @relation("WagerOpponent", fields: [opponentId], references: [id])
+
+  stakeAmount    Float // mise de CHAQUE joueur
+  currency       String @default("XOF")
+  commissionRate Float  @default(0) // % retenu par l'admin (0–100)
+
+  title      String // "Défi FIFA BO3"
+  terms      String? // règles : plateforme, format BO1/BO3, conditions
+  visibility WagerVisibility @default(PUBLIC)
+  status     WagerStatus     @default(OPEN)
+
+  // Accord mutuel sur les termes avant les dépôts
+  challengerAgreed Boolean @default(false)
+  opponentAgreed   Boolean @default(false)
+
+  winnerId String?
+  winner   Player? @relation("WagerWinner", fields: [winnerId], references: [id])
+
+  acceptDeadline DateTime? // expire si non accepté à temps
+  playByDate     DateTime? // date limite pour jouer le match
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  acceptedAt DateTime?
+  settledAt  DateTime?
+
+  deposits WagerDeposit[]
+  reports  WagerReport[]
+  dispute  WagerDispute?
+  payout   WagerPayout?
+
+  @@index([gameId, status])
+  @@index([challengerId])
+  @@index([opponentId])
+  @@map("wagers")
+}
+
+/// Dépôt de la mise d'un joueur vers le compte de l'admin (escrow).
+model WagerDeposit {
+  id      String @id @default(cuid())
+  wagerId String
+  wager   Wager  @relation(fields: [wagerId], references: [id], onDelete: Cascade)
+
+  playerId String
+  player   Player @relation(fields: [playerId], references: [id])
+
+  amount     Float
+  methodType PaymentMethodType
+  proofUrl   String? // capture du transfert envoyé par le joueur
+  reference  String? // référence/ID de transaction
+
+  status DepositStatus @default(PENDING)
+
+  // Validation admin (FK souple, comme Article.authorId)
+  confirmedByUserId String?
+  confirmedByName   String?
+  confirmedAt       DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@unique([wagerId, playerId]) // un dépôt par joueur et par défi
+  @@map("wager_deposits")
+}
+
+/// Déclaration du résultat du match par un participant.
+model WagerReport {
+  id      String @id @default(cuid())
+  wagerId String
+  wager   Wager  @relation(fields: [wagerId], references: [id], onDelete: Cascade)
+
+  reporterId      String
+  reporter        Player  @relation(fields: [reporterId], references: [id])
+  claimedWinnerId String // qui le déclarant désigne gagnant
+  proofUrl        String? // capture d'écran du résultat
+  note            String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([wagerId, reporterId]) // une déclaration par joueur
+  @@map("wager_reports")
+}
+
+/// Litige sur un défi (résultats contradictoires, dépôt contesté…).
+model WagerDispute {
+  id      String @id @default(cuid())
+  wagerId String @unique
+  wager   Wager  @relation(fields: [wagerId], references: [id], onDelete: Cascade)
+
+  openedById String
+  openedBy   Player @relation("DisputeOpener", fields: [openedById], references: [id])
+  reason     String
+
+  status DisputeStatus @default(OPEN)
+
+  // Résolution par un modérateur (FK souple)
+  resolvedByUserId String?
+  resolvedByName   String?
+  resolution       String?
+  resolvedWinnerId String?
+
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  @@map("wager_disputes")
+}
+
+/// Versement final de l'admin vers le vainqueur.
+model WagerPayout {
+  id      String @id @default(cuid())
+  wagerId String @unique
+  wager   Wager  @relation(fields: [wagerId], references: [id], onDelete: Cascade)
+
+  recipientId String
+  recipient   Player @relation("PayoutRecipient", fields: [recipientId], references: [id])
+
+  amount     Float // total reversé (mises - commission)
+  commission Float             @default(0)
+  methodType PaymentMethodType
+  proofUrl   String? // capture du versement effectué
+  note       String?
+
+  // Qui a effectué le versement (admin, FK souple)
+  paidByUserId String?
+  paidByName   String?
+
+  createdAt DateTime @default(now())
+
+  @@map("wager_payouts")
 }

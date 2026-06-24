@@ -9,6 +9,7 @@ const navLinks = [
   { href: "/players", label: "Joueurs" },
   { href: "/teams", label: "Équipes" },
   { href: "/rankings", label: "Classements" },
+  { href: "/wagers", label: "Paris" },
   { href: "/news", label: "Actualités" },
 ];
 
