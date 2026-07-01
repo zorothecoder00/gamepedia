@@ -40,16 +40,21 @@ export function useMutation<T = unknown>(
           headers: { "Content-Type": "application/json", ...extraHeaders },
           body: body !== undefined ? JSON.stringify(body) : undefined,
         });
-        const json = await res.json();
-        if (!res.ok || json.error) {
-          const errorMsg = json.error ?? `Erreur ${res.status}`;
+        // 204 / corps vide (ex: DELETE) : ne pas tenter de parser du JSON
+        const text = await res.text();
+        const json = text ? JSON.parse(text) : null;
+        if (!res.ok || json?.error) {
+          const errorMsg = json?.error ?? `Erreur ${res.status}`;
           setState({ data: null, loading: false, error: errorMsg });
           toast.error(errorMsg);
           return null;
         }
-        setState({ data: json.data ?? null, loading: false, error: null });
+        // Renvoie les données si présentes, sinon un sentinel truthy pour
+        // que les appelants (DELETE 204) puissent tester le succès.
+        const result = (json?.data ?? true) as T;
+        setState({ data: result, loading: false, error: null });
         if (successMessage) toast.success(successMessage);
-        return json.data ?? null;
+        return result;
       } catch {
         const errorMsg = "Erreur réseau";
         setState({ data: null, loading: false, error: errorMsg });

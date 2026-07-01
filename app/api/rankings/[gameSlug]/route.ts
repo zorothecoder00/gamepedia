@@ -12,7 +12,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     const game = await db.game.findUnique({ where: { slug: gameSlug }, select: { id: true } });
     if (!game) return notFound("Jeu introuvable");
 
-    const activeSeason = await db.season.findFirst({ where: { isActive: true } });
+    const activeSeason = await db.season.findFirst({ where: { isActive: true, gameId: game.id } });
 
     const where = {
       gameId: game.id,

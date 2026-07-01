@@ -3,8 +3,6 @@ import { ok, serverError } from "@/lib/api";
 
 export async function GET() {
   try {
-    const activeSeason = await db.season.findFirst({ where: { isActive: true } });
-
     const games = await db.game.findMany({
       where: { isActive: true },
       select: { id: true, name: true, slug: true },
@@ -12,10 +10,15 @@ export async function GET() {
 
     const rankings = await Promise.all(
       games.map(async (game) => {
+        // Saison active PROPRE à ce jeu (une active par jeu)
+        const season = await db.season.findFirst({
+          where: { isActive: true, gameId: game.id },
+          select: { id: true, name: true, year: true },
+        });
         const top5 = await db.rankingEntry.findMany({
           where: {
             gameId: game.id,
-            ...(activeSeason && { seasonId: activeSeason.id }),
+            ...(season && { seasonId: season.id }),
           },
           orderBy: { rank: "asc" },
           take: 5,
@@ -24,11 +27,11 @@ export async function GET() {
             team: { select: { name: true, tag: true } },
           },
         });
-        return { game, top5 };
+        return { game, season, top5 };
       }),
     );
 
-    return ok({ season: activeSeason, rankings });
+    return ok({ rankings });
   } catch {
     return serverError();
   }

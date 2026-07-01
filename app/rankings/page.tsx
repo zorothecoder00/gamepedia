@@ -3,18 +3,18 @@ import Link from "next/link";
 import { useApi } from "@/hooks/useApi";
 
 interface RankingEntry {
-  id: string; rank: number; points: number; wins: number;
+  id: string; rank: number; totalPoints: number; wins: number;
   player?: { pseudo: string; city?: string };
   team?: { name: string; tag: string; slug: string };
 }
 
 interface GameRanking {
   game: { id: string; name: string; slug: string; color?: string; logoUrl?: string };
+  season: { id: string; name: string; year?: number } | null;
   top5: RankingEntry[];
 }
 
 interface RankingsData {
-  season: { id: string; name: string } | null;
   rankings: GameRanking[];
 }
 
@@ -23,7 +23,6 @@ const RANK_COLORS = ["var(--accent-gold)", "#b0b0c0", "#cd7f32"];
 
 export default function RankingsPage() {
   const { data, loading } = useApi<RankingsData>("/api/rankings");
-  const season = data?.season;
   const rankings = data?.rankings ?? [];
 
   return (
@@ -31,7 +30,7 @@ export default function RankingsPage() {
       <div className="mb-8">
         <h1 className="text-[2rem] font-black text-[var(--text-primary)] mb-2">Classements</h1>
         <p className="text-[0.95rem] text-[var(--text-secondary)]">
-          {loading ? "Chargement..." : `Top 5 de chaque jeu actif${season ? ` — ${season.name}` : ""}`}
+          {loading ? "Chargement..." : "Top 5 de chaque jeu actif"}
         </p>
       </div>
 
@@ -41,7 +40,7 @@ export default function RankingsPage() {
         <div className="text-center py-12 text-[var(--text-muted)]">Aucun classement disponible.</div>
       ) : (
         <div className="grid gap-6 [grid-template-columns:repeat(auto-fill,minmax(380px,1fr))]">
-          {rankings.map(({ game, top5 }) => {
+          {rankings.map(({ game, season, top5 }) => {
             const color = game.color ?? "var(--accent-green)";
             return (
               <div key={game.slug} className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl overflow-hidden">
@@ -56,7 +55,7 @@ export default function RankingsPage() {
                       : <span className="text-2xl">🎮</span>}
                     <div>
                       <div className="font-bold text-[0.95rem] text-[var(--text-primary)]">{game.name}</div>
-                      <div className="text-[0.73rem] text-[var(--text-muted)]">{season?.name ?? "Saison active"}</div>
+                      <div className="text-[0.73rem] text-[var(--text-muted)]">{season?.name ?? "Aucune saison active"}</div>
                     </div>
                   </div>
                   <Link href={`/rankings/${game.slug}`} className="text-[0.8rem] font-semibold no-underline hover:underline" style={{ color }}>
@@ -100,7 +99,7 @@ export default function RankingsPage() {
                           {city && <span className="text-[0.72rem] text-[var(--text-muted)]">{city}</span>}
                         </div>
                         <div className="text-right shrink-0">
-                          <div className="font-bold text-[0.9rem] text-[var(--accent-gold)]">{entry.points.toLocaleString()}</div>
+                          <div className="font-bold text-[0.9rem] text-[var(--accent-gold)]">{entry.totalPoints.toLocaleString()}</div>
                           <div className="text-[0.68rem] text-[var(--text-muted)]">pts</div>
                         </div>
                       </div>

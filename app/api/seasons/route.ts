@@ -4,7 +4,13 @@ import { ok, created, serverError } from "@/lib/api";
 
 export async function GET() {
   try {
-    const seasons = await db.season.findMany({ orderBy: { startDate: "desc" } });
+    const seasons = await db.season.findMany({
+      orderBy: { startDate: "desc" },
+      include: {
+        game: { select: { name: true, slug: true } },
+        _count: { select: { rankingEntries: true } },
+      },
+    });
     return ok(seasons);
   } catch {
     return serverError();

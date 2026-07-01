@@ -7,12 +7,16 @@ type Params = { params: Promise<{ id: string }> };
 export async function POST(_request: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
-    const season = await db.season.findUnique({ where: { id }, select: { id: true } });
+    const season = await db.season.findUnique({ where: { id }, select: { id: true, gameId: true } });
     if (!season) return notFound("Saison introuvable");
 
-    // Désactiver toutes les autres saisons, activer celle-ci
+    // Une seule saison active PAR JEU : ne désactive que les autres
+    // saisons du même jeu, pas celles des autres jeux.
     await db.$transaction([
-      db.season.updateMany({ where: { isActive: true }, data: { isActive: false } }),
+      db.season.updateMany({
+        where: { gameId: season.gameId, isActive: true, NOT: { id } },
+        data: { isActive: false },
+      }),
       db.season.update({ where: { id }, data: { isActive: true } }),
     ]);
 

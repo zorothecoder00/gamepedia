@@ -8,10 +8,14 @@ export async function GET(request: NextRequest) {
     const { page, limit, skip } = getPagination(sp);
     const game = sp.get("game") ?? undefined;
     const region = sp.get("region") ?? undefined;
+    const search = sp.get("search") ?? undefined;
+    // ?all=true → inclut les équipes désactivées (usage admin)
+    const all = sp.get("all") === "true";
 
     const where = {
-      isActive: true,
+      ...(all ? {} : { isActive: true }),
       ...(region && { region: { contains: region, mode: "insensitive" as const } }),
+      ...(search && { name: { contains: search, mode: "insensitive" as const } }),
       ...(game && { members: { some: { player: { gameProfiles: { some: { game: { slug: game } } } } } } }),
     };
 

@@ -7,9 +7,11 @@ export async function GET(request: NextRequest) {
     const sp = request.nextUrl.searchParams;
     const { page, limit, skip } = getPagination(sp);
     const tag = sp.get("tag") ?? undefined;
+    // ?status=all|draft|published (défaut : published, usage public)
+    const status = sp.get("status") ?? "published";
 
     const where = {
-      isPublished: true,
+      ...(status === "all" ? {} : { isPublished: status !== "draft" }),
       ...(tag && { tags: { has: tag } }),
     };
 
@@ -18,10 +20,10 @@ export async function GET(request: NextRequest) {
         where,
         skip,
         take: limit,
-        orderBy: { publishedAt: "desc" },
+        orderBy: status === "published" ? { publishedAt: "desc" } : { updatedAt: "desc" },
         select: {
           id: true, title: true, slug: true, excerpt: true, coverImage: true,
-          tags: true, publishedAt: true, authorName: true,
+          tags: true, publishedAt: true, authorName: true, isPublished: true, updatedAt: true,
         },
       }),
       db.article.count({ where }),

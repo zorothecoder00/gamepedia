@@ -3,3 +3,14 @@ Dans Next.js App Router, tous les composants sont
    et les hooks React (useState, useEffect) ne fonctionnent que côté client — il
    faut donc déclarer "use client" en première ligne pour les fichiers qui les
   utilisent.
+
+
+
+-Vérifie si tu as déjà codé la page utilisateur ( différente de l'admin qui a une vue globale et gère tout)
+
+-Reste hors admin, si tu veux continuer un jour : /profile/edit,
+  /rankings/[gameSlug]/[seasonId], /tournaments/[slug]/bracket (plein écran), et
+  les pages d'erreur /error + /not-found. Rien d'urgent — dis-moi si tu veux
+  que j'en prenne une.
+
+

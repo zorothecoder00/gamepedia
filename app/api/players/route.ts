@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
         take: limit,
         orderBy: { pseudo: "asc" },
         select: {
-          id: true, pseudo: true, city: true, region: true, isVerified: true,
+          id: true, pseudo: true, city: true, region: true, isVerified: true, isActive: true,
           gameProfiles: { select: { game: { select: { name: true, slug: true } } } },
           teamMemberships: {
             where: { leftAt: null },
