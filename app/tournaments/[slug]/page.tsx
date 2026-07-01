@@ -231,7 +231,15 @@ export default function TournamentPage({ params }: { params: { slug: string } })
         {/* Bracket */}
         {activeTab === 2 && (
           <div>
-            <h2 className="font-bold text-[1.1rem] text-[var(--text-primary)] mb-5">Bracket</h2>
+            <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
+              <h2 className="font-bold text-[1.1rem] text-[var(--text-primary)]">Bracket</h2>
+              <Link
+                href={`/tournaments/${tournament.slug}/bracket`}
+                className="text-[0.82rem] font-semibold text-[var(--tier-s)] no-underline hover:underline"
+              >
+                Plein écran ↗
+              </Link>
+            </div>
             {loadingBracket ? (
               <p className="text-[var(--text-muted)]">Chargement du bracket...</p>
             ) : !bracket || bracket.length === 0 ? (

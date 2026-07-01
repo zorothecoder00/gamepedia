@@ -138,7 +138,7 @@ function FormInput({ label, value, onChange, type = "text", readOnly = false }: 
 export default function ProfilePage() {
   const router   = useRouter();
   const [activeTab, setActiveTab] = useState(0);
-  const [token, setToken]         = useState<string | null>(() =>
+  const [token]                   = useState<string | null>(() =>
     typeof window !== "undefined" ? localStorage.getItem("gp_token") : null
   );
   const [settings, setSettings]   = useState({
@@ -436,12 +436,12 @@ export default function ProfilePage() {
               )}
               <SectionBlock title="Actions rapides">
                 <div className="space-y-2">
-                  <button
-                    onClick={() => setActiveTab(4)}
-                    className="block w-full text-center py-2.5 rounded-lg text-sm font-semibold cursor-pointer hover:opacity-90 transition-opacity bg-[var(--accent-green)] text-[#09090f]"
+                  <Link
+                    href="/profile/edit"
+                    className="block w-full text-center py-2.5 rounded-lg text-sm font-semibold cursor-pointer hover:opacity-90 transition-opacity bg-[var(--accent-green)] text-[#09090f] no-underline"
                   >
                     Modifier mon profil
-                  </button>
+                  </Link>
                   <button
                     onClick={() => setActiveTab(3)}
                     className="block w-full text-center py-2.5 rounded-lg text-sm font-medium border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"

@@ -1,6 +1,6 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
-import { paginated, notFound, serverError, getPagination } from "@/lib/api";
+import { notFound, serverError, getPagination } from "@/lib/api";
 
 type Params = { params: Promise<{ gameSlug: string; seasonId: string }> };
 
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     const [game, season] = await Promise.all([
       db.game.findUnique({ where: { slug: gameSlug }, select: { id: true } }),
-      db.season.findUnique({ where: { id: seasonId }, select: { id: true, name: true } }),
+      db.season.findUnique({ where: { id: seasonId }, select: { id: true, name: true, year: true } }),
     ]);
 
     if (!game) return notFound("Jeu introuvable");
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     const where = { gameId: game.id, seasonId };
 
-    const [entries, total] = await Promise.all([
+    const [entries, total, prizeAgg, tournamentIds] = await Promise.all([
       db.rankingEntry.findMany({
         where,
         skip,
@@ -31,9 +31,31 @@ export async function GET(request: NextRequest, { params }: Params) {
         },
       }),
       db.rankingEntry.count({ where }),
+      db.rankingEntry.aggregate({ where, _sum: { totalPrizeMoney: true } }),
+      db.pointAttribution.findMany({
+        where: { seasonId },
+        select: { tournamentId: true },
+        distinct: ["tournamentId"],
+      }),
     ]);
 
-    return paginated(entries, total, page, limit);
+    // On glisse le résumé de saison dans meta (consommé par la page).
+    return NextResponse.json({
+      data: entries,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        season: {
+          name: season.name,
+          year: season.year,
+          participants: total,
+          totalPrize: prizeAgg._sum.totalPrizeMoney ?? 0,
+          tournamentsCount: tournamentIds.length,
+        },
+      },
+    });
   } catch {
     return serverError();
   }
