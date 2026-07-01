@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
 import { created, badRequest, serverError } from "@/lib/api";
+import { hashPassword } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,9 +23,8 @@ export async function POST(request: NextRequest) {
       return badRequest("Email ou pseudo déjà utilisé");
     }
 
-    // TODO: hash du mot de passe (bcrypt)
     const user = await db.user.create({
-      data: { email, username, passwordHash: password },
+      data: { email, username, passwordHash: await hashPassword(password) },
       select: { id: true, email: true, username: true, role: true, createdAt: true },
     });
 

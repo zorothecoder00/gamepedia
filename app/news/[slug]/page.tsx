@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import GameTag from "../../components/GameTag";
+import MarkdownContent from "../../components/MarkdownContent";
 import { useApi } from "@/hooks/useApi";
 
 interface Article {
@@ -14,62 +15,6 @@ const CATEGORY_COLORS: Record<string, string> = {
   Résultats: "var(--accent-green)", Analyse: "var(--accent-blue)",
   Annonce: "var(--tier-s)", Portrait: "var(--tier-a)", Actualité: "var(--text-muted)",
 };
-
-function MarkdownContent({ content }: { content: string }) {
-  const lines = content.split("\n");
-  const elements: React.ReactNode[] = [];
-  let i = 0;
-
-  while (i < lines.length) {
-    const line = lines[i];
-    if (line.startsWith("## ")) {
-      elements.push(
-        <h2 key={i} className="text-[var(--text-primary)] font-bold text-[1.2rem] mt-6 mb-3">
-          {line.replace("## ", "")}
-        </h2>,
-      );
-    } else if (line.startsWith("| ")) {
-      const tableLines: string[] = [];
-      while (i < lines.length && lines[i].startsWith("|")) { tableLines.push(lines[i]); i++; }
-      const [header, , ...rows] = tableLines;
-      const headers = header.split("|").filter(Boolean).map((h) => h.trim());
-      elements.push(
-        <div key={`table-${i}`} className="overflow-x-auto my-4">
-          <table className="w-full border-collapse text-[0.88rem]">
-            <thead>
-              <tr>
-                {headers.map((h, j) => (
-                  <th key={j} className="px-3.5 py-2 text-left text-[var(--text-muted)] border-b border-[var(--border)] font-semibold">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, ri) => (
-                <tr key={ri} className="border-b border-[var(--border)]">
-                  {row.split("|").filter(Boolean).map((cell, ci) => (
-                    <td key={ci} className="px-3.5 py-2 text-[var(--text-secondary)]">{cell.trim()}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>,
-      );
-      continue;
-    } else if (line.trim() !== "") {
-      const parts = line.split(/\*\*([^*]+)\*\*/g);
-      elements.push(
-        <p key={i} className="text-[var(--text-secondary)] text-[0.92rem] leading-[1.75] mb-3.5">
-          {parts.map((part, j) =>
-            j % 2 === 1 ? <strong key={j} className="text-[var(--text-primary)] font-bold">{part}</strong> : part,
-          )}
-        </p>,
-      );
-    }
-    i++;
-  }
-  return <div>{elements}</div>;
-}
 
 export default function ArticlePage({ params }: { params: { slug: string } }) {
   const { slug } = params;

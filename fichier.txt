@@ -8,13 +8,9 @@ Dans Next.js App Router, tous les composants sont
 
 -Vérifie si tu as déjà codé la page utilisateur ou c'est ça tu as appelé /profile ( différente de l'admin qui a une vue globale et gère tout)
 
--Reste hors admin, si tu veux continuer un jour : /profile/edit,
-  /rankings/[gameSlug]/[seasonId], /tournaments/[slug]/bracket (plein écran), et
-  les pages d'erreur /error + /not-found. Rien d'urgent — dis-moi si tu veux
-  que j'en prenne une.
 
 
- Toutes les pages de docs/pages.md sont désormais présentes. Correction de mon
+Toutes les pages de docs/pages.md sont désormais présentes. Correction de mon
   audit du départ : la doc annonçait ~34 pages ; il en manquait réellement moins
   que je ne le pensais (les pages d'erreur existaient). Il reste surtout, si tu
   veux pousser la qualité :
@@ -23,4 +19,9 @@ Dans Next.js App Router, tous les composants sont
   - un vrai rendu Markdown pour les articles (actuellement un parseur maison
   minimal) ;
   - l'auth (les tokens sont des demo-token-<id>, à remplacer par du JWT).
+
+
+ Les stubs password/reset et password/confirm (réinitialisation par email)
+  restent hors périmètre — ils nécessitent un token de reset stocké en base,
+  c'est une feature à part
 

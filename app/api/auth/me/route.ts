@@ -1,15 +1,7 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
 import { ok, unauthorized, serverError } from "@/lib/api";
-
-// TODO: remplacer par une vraie vérification JWT
-async function getUserIdFromRequest(request: NextRequest): Promise<string | null> {
-  const auth = request.headers.get("authorization");
-  if (!auth?.startsWith("Bearer ")) return null;
-  const token = auth.slice(7);
-  // demo: token format "demo-token-<userId>"
-  return token.startsWith("demo-token-") ? token.replace("demo-token-", "") : null;
-}
+import { getUserIdFromRequest } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {

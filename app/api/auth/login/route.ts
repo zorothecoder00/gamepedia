@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
 import { ok, badRequest, unauthorized, serverError } from "@/lib/api";
+import { signToken, verifyPassword, hashPassword } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,11 +19,18 @@ export async function POST(request: NextRequest) {
 
     if (!user) return unauthorized("Identifiants invalides");
 
-    // TODO: comparer le hash (bcrypt.compare)
-    if (user.passwordHash !== password) return unauthorized("Identifiants invalides");
+    const { valid, upgraded } = await verifyPassword(password, user.passwordHash);
+    if (!valid) return unauthorized("Identifiants invalides");
 
-    // TODO: générer un JWT signé
-    const token = `demo-token-${user.id}`;
+    // Migration douce : ré-écrit un vrai hash bcrypt si l'ancien était en clair.
+    if (upgraded) {
+      await db.user.update({
+        where: { id: user.id },
+        data: { passwordHash: await hashPassword(password) },
+      });
+    }
+
+    const token = await signToken({ id: user.id, role: user.role });
 
     return ok({ token, user: { id: user.id, email: user.email, username: user.username, role: user.role } });
   } catch {
