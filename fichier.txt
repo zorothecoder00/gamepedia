@@ -3,7 +3,3 @@ Dans Next.js App Router, tous les composants sont
    et les hooks React (useState, useEffect) ne fonctionnent que côté client — il
    faut donc déclarer "use client" en première ligne pour les fichiers qui les
   utilisent.
-
-
-ajoute la gestion des moyens de réception au profil
-────────────────────────────────────────────────────────────

@@ -8,6 +8,7 @@ import TierBadge from "@/app/components/TierBadge";
 import GameTag from "@/app/components/GameTag";
 import { useApi } from "@/hooks/useApi";
 import { useMutation } from "@/hooks/useMutation";
+import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS, type PaymentMethodType } from "@/app/wagers/wager-ui";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -39,7 +40,49 @@ interface PalmaresEntry {
   tournament: { name: string; slug: string; tier: string; startDate: string };
 }
 
-const TABS = ["Mon profil", "Palmarès", "Achievements", "Paramètres"];
+interface PayoutMethod {
+  id: string;
+  type: PaymentMethodType;
+  label: string;
+  details: Record<string, string>;
+  isDefault: boolean;
+  createdAt: string;
+}
+
+const TABS = ["Mon profil", "Palmarès", "Achievements", "Moyens de réception", "Paramètres"];
+
+// Champs de coordonnées attendus par type de moyen de réception
+const METHOD_FIELDS: Record<PaymentMethodType, { key: string; label: string; placeholder?: string }[]> = {
+  MOBILE_MONEY: [
+    { key: "operator",   label: "Opérateur",        placeholder: "Moov Money / T-Money" },
+    { key: "phone",      label: "Numéro",           placeholder: "+228 90 00 00 00" },
+    { key: "holderName", label: "Nom du titulaire" },
+  ],
+  WESTERN_UNION: [
+    { key: "receiverName", label: "Nom du bénéficiaire" },
+    { key: "city",         label: "Ville" },
+    { key: "country",      label: "Pays", placeholder: "Togo" },
+  ],
+  BANK_TRANSFER: [
+    { key: "bankName",    label: "Banque" },
+    { key: "accountName", label: "Titulaire du compte" },
+    { key: "iban",        label: "IBAN / N° de compte" },
+  ],
+  BANK_CARD: [
+    { key: "cardHolder", label: "Titulaire de la carte" },
+    { key: "cardNumber", label: "Numéro de carte" },
+  ],
+  OTHER: [
+    { key: "info", label: "Coordonnées", placeholder: "Décrivez comment vous payer" },
+  ],
+};
+
+const emptyPayoutForm = {
+  type: "MOBILE_MONEY" as PaymentMethodType,
+  label: "",
+  details: {} as Record<string, string>,
+  isDefault: false,
+};
 
 const RARITY_COLORS: Record<string, string> = {
   Commun:     "text-[var(--text-muted)]",
@@ -140,6 +183,56 @@ export default function ProfilePage() {
   );
 
   const saving = savingAccount || savingPlayer;
+
+  // ── Moyens de réception ──
+  const { data: payoutMethods, loading: payoutLoading, refetch: refetchPayouts } = useApi<PayoutMethod[]>(
+    activeTab === 3 && pseudo ? `/api/players/${pseudo}/payout-methods` : null,
+    [activeTab, pseudo], authHeader,
+  );
+  const { mutate: addPayout, loading: addingPayout } = useMutation<PayoutMethod>(
+    pseudo ? `/api/players/${pseudo}/payout-methods` : "/api/players/__none",
+    "POST", authHeader,
+  );
+  const [payoutForm, setPayoutForm] = useState(emptyPayoutForm);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleAddPayout = async () => {
+    if (!payoutForm.label.trim()) { toast.error("Le libellé est requis."); return; }
+    const details: Record<string, string> = {};
+    for (const f of METHOD_FIELDS[payoutForm.type]) {
+      const v = payoutForm.details[f.key]?.trim();
+      if (v) details[f.key] = v;
+    }
+    if (Object.keys(details).length === 0) { toast.error("Renseignez au moins une coordonnée."); return; }
+    const r = await addPayout({
+      type: payoutForm.type,
+      label: payoutForm.label.trim(),
+      details,
+      isDefault: payoutForm.isDefault,
+    });
+    if (r) {
+      toast.success("Moyen de réception ajouté !");
+      setPayoutForm(emptyPayoutForm);
+      refetchPayouts();
+    }
+  };
+
+  const handleDeletePayout = async (id: string) => {
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/payout-methods/${id}`, { method: "DELETE", headers: authHeader });
+      if (res.ok) {
+        toast.success("Moyen de réception supprimé.");
+        refetchPayouts();
+      } else {
+        toast.error("La suppression a échoué.");
+      }
+    } catch {
+      toast.error("Erreur réseau.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     if (me && player && !settingsInitialized.current) {
@@ -344,10 +437,16 @@ export default function ProfilePage() {
               <SectionBlock title="Actions rapides">
                 <div className="space-y-2">
                   <button
-                    onClick={() => setActiveTab(3)}
+                    onClick={() => setActiveTab(4)}
                     className="block w-full text-center py-2.5 rounded-lg text-sm font-semibold cursor-pointer hover:opacity-90 transition-opacity bg-[var(--accent-green)] text-[#09090f]"
                   >
                     Modifier mon profil
+                  </button>
+                  <button
+                    onClick={() => setActiveTab(3)}
+                    className="block w-full text-center py-2.5 rounded-lg text-sm font-medium border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                  >
+                    Moyens de réception
                   </button>
                   <Link href="/tournaments" className="block text-center py-2.5 rounded-lg text-sm font-medium border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
                     Voir les tournois
@@ -426,8 +525,128 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* ── Paramètres ── */}
+        {/* ── Moyens de réception ── */}
         {activeTab === 3 && (
+          <div className="grid lg:grid-cols-[1.4fr_1fr] gap-8">
+            {/* Liste des moyens enregistrés */}
+            <div>
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-base font-bold text-[var(--text-primary)]">Mes coordonnées de réception</h2>
+              </div>
+              <p className="text-xs text-[var(--text-muted)] mb-5 leading-relaxed">
+                Ces coordonnées permettent à l&apos;administration de vous verser vos gains de défis.
+                Elles ne sont visibles que par l&apos;équipe GamePedia.
+              </p>
+
+              {payoutLoading ? (
+                <div className="text-center py-12 text-[var(--text-muted)]">Chargement...</div>
+              ) : !payoutMethods || payoutMethods.length === 0 ? (
+                <div className="text-center py-12 rounded-xl border border-dashed border-[var(--border)] text-[var(--text-muted)]">
+                  Aucun moyen de réception enregistré.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {payoutMethods.map((m) => (
+                    <div key={m.id} className="p-4 rounded-xl bg-[var(--bg-card)] border border-[var(--border)]">
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold text-[var(--text-primary)]">{m.label}</p>
+                            {m.isDefault && (
+                              <span className="text-[0.62rem] font-bold px-2 py-0.5 rounded bg-[rgba(0,196,74,0.1)] border border-[rgba(0,196,74,0.25)] text-[var(--accent-green)]">
+                                Par défaut
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-[var(--text-muted)]">{PAYMENT_METHOD_LABELS[m.type]}</p>
+                        </div>
+                        <button
+                          onClick={() => handleDeletePayout(m.id)}
+                          disabled={deletingId === m.id}
+                          className="text-xs font-medium px-2.5 py-1 rounded-lg border border-[rgba(230,48,48,0.35)] text-[var(--accent-red)] hover:bg-[rgba(230,48,48,0.08)] transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          {deletingId === m.id ? "..." : "Supprimer"}
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-x-6 gap-y-1 pt-2 border-t border-[var(--border)]">
+                        {Object.entries(m.details).map(([k, v]) => {
+                          const field = METHOD_FIELDS[m.type]?.find((f) => f.key === k);
+                          return (
+                            <div key={k} className="text-xs">
+                              <span className="text-[var(--text-muted)]">{field?.label ?? k} : </span>
+                              <span className="text-[var(--text-secondary)]">{v}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Formulaire d'ajout */}
+            <div>
+              <SectionBlock title="Ajouter un moyen de réception">
+                <div className="mb-4">
+                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">Type</label>
+                  <select
+                    value={payoutForm.type}
+                    onChange={(e) => setPayoutForm((f) => ({ ...f, type: e.target.value as PaymentMethodType, details: {} }))}
+                    className="w-full rounded-lg px-3.5 py-2.5 text-sm border border-[var(--border)] outline-none bg-[var(--bg-primary)] text-[var(--text-primary)]"
+                  >
+                    {PAYMENT_METHODS.map((t) => (
+                      <option key={t} value={t}>{PAYMENT_METHOD_LABELS[t]}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <FormInput
+                  label="Libellé"
+                  value={payoutForm.label}
+                  onChange={(v) => setPayoutForm((f) => ({ ...f, label: v }))}
+                />
+
+                {METHOD_FIELDS[payoutForm.type].map((field) => (
+                  <div key={field.key} className="mb-4">
+                    <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">{field.label}</label>
+                    <input
+                      type="text"
+                      value={payoutForm.details[field.key] ?? ""}
+                      placeholder={field.placeholder}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setPayoutForm((f) => ({ ...f, details: { ...f.details, [field.key]: val } }));
+                      }}
+                      className="w-full rounded-lg px-3.5 py-2.5 text-sm border border-[var(--border)] outline-none bg-[var(--bg-primary)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                    />
+                  </div>
+                ))}
+
+                <label className="flex items-center gap-2 mb-5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={payoutForm.isDefault}
+                    onChange={(e) => setPayoutForm((f) => ({ ...f, isDefault: e.target.checked }))}
+                    className="accent-[var(--accent-green)]"
+                  />
+                  <span className="text-xs text-[var(--text-secondary)]">Définir comme moyen par défaut</span>
+                </label>
+
+                <button
+                  onClick={handleAddPayout}
+                  disabled={addingPayout}
+                  className="w-full py-3 rounded-lg text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed bg-[var(--accent-green)] text-[#09090f]"
+                >
+                  {addingPayout ? "Ajout..." : "Ajouter"}
+                </button>
+              </SectionBlock>
+            </div>
+          </div>
+        )}
+
+        {/* ── Paramètres ── */}
+        {activeTab === 4 && (
           <div className="max-w-xl">
             <SectionBlock title="Informations personnelles">
               <FormInput label="Pseudo"      value={settings.username} onChange={(v) => setSettings((s) => ({ ...s, username: v }))} />
