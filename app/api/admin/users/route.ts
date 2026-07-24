@@ -1,9 +1,14 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
-import { paginated, serverError, getPagination } from "@/lib/api";
+import { paginated, unauthorized, forbidden, serverError, getPagination } from "@/lib/api";
+import { getAuthUser, isStaff } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
+    const actor = await getAuthUser(request);
+    if (!actor) return unauthorized();
+    if (!isStaff(actor.role)) return forbidden("Réservé à l'administration.");
+
     const sp = request.nextUrl.searchParams;
     const { page, limit, skip } = getPagination(sp);
     const search = sp.get("search") ?? undefined;

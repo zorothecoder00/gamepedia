@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 
 const navLinks = [
   { href: "/games", label: "Jeux" },
@@ -15,7 +16,23 @@ const navLinks = [
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { me, isAuthenticated, refetch } = useAuth();
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      // Resynchronise l'état d'auth du Navbar (le cookie est déjà effacé
+      // côté serveur) avant de naviguer, sans recharger toute la page.
+      refetch();
+      router.push("/auth/login?loggedOut=1");
+    } finally {
+      setLoggingOut(false);
+    }
+  };
 
   return (
     <nav className="bg-[var(--bg-secondary)] border-b border-[var(--border)] sticky top-0 z-50">
@@ -53,18 +70,38 @@ export default function Navbar() {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          <Link
-            href="/auth/login"
-            className="hidden md:inline-flex px-3.5 py-1.5 rounded-md text-sm font-medium text-[var(--text-secondary)] no-underline border border-[var(--border)] hover:text-[var(--text-primary)] transition-colors"
-          >
-            Connexion
-          </Link>
-          <Link
-            href="/auth/register"
-            className="hidden md:inline-flex px-3.5 py-1.5 rounded-md text-sm font-semibold text-black no-underline bg-[var(--accent-green)] hover:opacity-90 transition-opacity"
-          >
-            S&apos;inscrire
-          </Link>
+          {isAuthenticated ? (
+            <>
+              <Link
+                href="/profile"
+                className="hidden md:inline-flex px-3.5 py-1.5 rounded-md text-sm font-medium text-[var(--text-secondary)] no-underline border border-[var(--border)] hover:text-[var(--text-primary)] transition-colors"
+              >
+                {me?.player?.pseudo ?? me?.username}
+              </Link>
+              <button
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="hidden md:inline-flex px-3.5 py-1.5 rounded-md text-sm font-semibold text-black bg-[var(--accent-green)] border-none cursor-pointer hover:opacity-90 disabled:opacity-50 transition-opacity"
+              >
+                {loggingOut ? "…" : "Déconnexion"}
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/auth/login"
+                className="hidden md:inline-flex px-3.5 py-1.5 rounded-md text-sm font-medium text-[var(--text-secondary)] no-underline border border-[var(--border)] hover:text-[var(--text-primary)] transition-colors"
+              >
+                Connexion
+              </Link>
+              <Link
+                href="/auth/register"
+                className="hidden md:inline-flex px-3.5 py-1.5 rounded-md text-sm font-semibold text-black no-underline bg-[var(--accent-green)] hover:opacity-90 transition-opacity"
+              >
+                S&apos;inscrire
+              </Link>
+            </>
+          )}
 
           {/* Hamburger */}
           <button
@@ -108,12 +145,33 @@ export default function Navbar() {
             );
           })}
           <div className="flex gap-2 mt-3 pt-3 border-t border-[var(--border)]">
-            <Link href="/auth/login" className="flex-1 text-center py-2 rounded-md text-sm font-medium text-[var(--text-secondary)] no-underline border border-[var(--border)]">
-              Connexion
-            </Link>
-            <Link href="/auth/register" className="flex-1 text-center py-2 rounded-md text-sm font-semibold text-black no-underline bg-[var(--accent-green)]">
-              S&apos;inscrire
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link
+                  href="/profile"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex-1 text-center py-2 rounded-md text-sm font-medium text-[var(--text-secondary)] no-underline border border-[var(--border)]"
+                >
+                  {me?.player?.pseudo ?? me?.username}
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                  className="flex-1 text-center py-2 rounded-md text-sm font-semibold text-black bg-[var(--accent-green)] border-none cursor-pointer disabled:opacity-50"
+                >
+                  {loggingOut ? "…" : "Déconnexion"}
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/auth/login" className="flex-1 text-center py-2 rounded-md text-sm font-medium text-[var(--text-secondary)] no-underline border border-[var(--border)]">
+                  Connexion
+                </Link>
+                <Link href="/auth/register" className="flex-1 text-center py-2 rounded-md text-sm font-semibold text-black no-underline bg-[var(--accent-green)]">
+                  S&apos;inscrire
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}

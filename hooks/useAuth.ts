@@ -1,6 +1,5 @@
 "use client";
 import { useApi } from "./useApi";
-import { useState } from "react";
 
 export interface AuthPlayer {
   id: string;
@@ -20,20 +19,19 @@ export interface AuthMe {
 }
 
 /**
- * Lit le token démo dans localStorage et charge l'utilisateur courant.
- * Renvoie aussi l'en-tête Authorization prêt à passer aux hooks.
+ * Charge l'utilisateur courant via le cookie de session httpOnly
+ * (envoyé automatiquement par le navigateur, pas besoin de le lire
+ * ni de le transmettre manuellement). `silent: true` car un 401
+ * (visiteur non connecté) est un état normal, pas une erreur à
+ * signaler.
  */
 export function useAuth() {
-  const [token] = useState<string | null>(() =>
-    typeof window !== "undefined" ? localStorage.getItem("gp_token") : null,
+  const { data: me, loading, refetch } = useApi<AuthMe>(
+    "/api/auth/me",
+    [],
+    undefined,
+    { silent: true },
   );
 
-  const authHeader = token ? { Authorization: `Bearer ${token}` } : undefined;
-  const { data: me, loading } = useApi<AuthMe>(
-    token ? "/api/auth/me" : null,
-    [token],
-    authHeader,
-  );
-
-  return { token, me, player: me?.player ?? null, authHeader, loading };
+  return { me, player: me?.player ?? null, loading, isAuthenticated: !!me, refetch };
 }

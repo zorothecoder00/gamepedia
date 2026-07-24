@@ -18,7 +18,7 @@ interface AdminPlayer {
 }
 
 export default function AdminPlayersPage() {
-  const { token, me, authHeader, loading: authLoading } = useAuth();
+  const { me, loading: authLoading } = useAuth();
   const isStaff = me?.role === "ADMIN" || me?.role === "MODERATOR";
   const [search, setSearch] = useState("");
 
@@ -28,15 +28,14 @@ export default function AdminPlayersPage() {
     loading,
     refetch,
   } = useApi<AdminPlayer[]>(
-    token && isStaff ? `/api/players?limit=50${q}` : null,
-    [token, isStaff, search],
-    authHeader,
+    isStaff ? `/api/players?limit=50${q}` : null,
+    [isStaff, search],
   );
 
   if (authLoading) {
     return <div className="min-h-[50vh] grid place-items-center text-[var(--text-muted)]">Chargement...</div>;
   }
-  if (!token || !isStaff) {
+  if (!isStaff) {
     return (
       <div className="min-h-[50vh] grid place-items-center text-[var(--text-muted)]">
         <div className="flex flex-col items-center gap-3">
@@ -71,7 +70,7 @@ export default function AdminPlayersPage() {
       ) : (
         <div className="flex flex-col gap-2.5">
           {players.map((p) => (
-            <PlayerRow key={p.id} player={p} authHeader={authHeader} onChanged={refetch} />
+            <PlayerRow key={p.id} player={p} onChanged={refetch} />
           ))}
         </div>
       )}

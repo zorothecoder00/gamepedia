@@ -1,8 +1,8 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import TierBadge from "../../components/TierBadge";
-import GameTag from "../../components/GameTag";
 import { useApi } from "@/hooks/useApi";
 
 interface TeamMember {
@@ -78,7 +78,7 @@ export default function TeamPage({ params }: { params: { slug: string } }) {
               className="w-[88px] h-[88px] rounded-xl flex items-center justify-center text-[2.75rem] shrink-0 overflow-hidden"
               style={{ background: `${color}22`, border: `3px solid ${color}55` }}
             >
-              {team.logoUrl ? <img src={team.logoUrl} alt={team.name} className="w-full h-full object-cover" /> : "🛡️"}
+              {team.logoUrl ? <Image src={team.logoUrl} alt={team.name} width={88} height={88} className="w-full h-full object-cover" /> : "🛡️"}
             </div>
 
             {/* Info */}

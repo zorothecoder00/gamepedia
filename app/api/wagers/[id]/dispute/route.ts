@@ -2,14 +2,16 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
 import {
   created,
-  badRequest,
   notFound,
   unauthorized,
   forbidden,
+  tooManyRequests,
   handleApiError,
 } from "@/lib/api";
 import { getAuthUser } from "@/lib/auth";
 import { isParticipant } from "@/lib/wagers";
+import { parseBody, wagerDisputeSchema } from "@/lib/validation";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -28,6 +30,10 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (!user?.player) return unauthorized();
     const playerId = user.player.id;
 
+    if (!checkRateLimit(`wager-dispute:${playerId}`, 20, 60_000)) {
+      return tooManyRequests();
+    }
+
     const wager = await db.wager.findUnique({ where: { id } });
     if (!wager) return notFound("Défi introuvable");
     if (!isParticipant(wager, playerId)) return forbidden();
@@ -35,9 +41,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       return forbidden("Aucun litige possible à ce stade.");
     }
 
-    const body = await request.json();
-    const { reason } = body as { reason?: string };
-    if (!reason?.trim()) return badRequest("Un motif est requis.");
+    const { reason } = await parseBody(request, wagerDisputeSchema);
 
     const dispute = await db.$transaction(async (tx) => {
       const d = await tx.wagerDispute.upsert({

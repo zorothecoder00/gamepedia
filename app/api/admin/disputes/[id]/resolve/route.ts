@@ -15,6 +15,7 @@ import {
   markWagerWon,
   notifyPlayer,
 } from "@/lib/wagers";
+import { parseBody, disputeResolveSchema } from "@/lib/validation";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -26,14 +27,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (!user) return unauthorized();
     if (!isStaff(user.role)) return forbidden("Réservé à l'administration.");
 
-    const body = await request.json();
-    const { resolvedWinnerId, resolution } = body as {
-      resolvedWinnerId?: string;
-      resolution?: string;
-    };
-    if (!resolvedWinnerId || !resolution?.trim()) {
-      return badRequest("resolvedWinnerId et resolution sont requis.");
-    }
+    const { resolvedWinnerId, resolution } = await parseBody(request, disputeResolveSchema);
 
     const dispute = await db.wagerDispute.findUnique({
       where: { id },

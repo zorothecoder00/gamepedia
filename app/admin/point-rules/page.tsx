@@ -28,13 +28,12 @@ const finalPoints = (r: { pointsAwarded: number; formatMultiplier: number }) =>
   Math.round(r.pointsAwarded * r.formatMultiplier);
 
 export default function AdminPointRulesPage() {
-  const { token, me, authHeader, loading: authLoading } = useAuth();
+  const { me, loading: authLoading } = useAuth();
   const isStaff = me?.role === "ADMIN" || me?.role === "MODERATOR";
 
   const { data: games } = useApi<Game[]>(
-    token && isStaff ? "/api/games" : null,
-    [token, isStaff],
-    authHeader,
+    isStaff ? "/api/games" : null,
+    [isStaff],
   );
   // Sélection dérivée : le jeu choisi, sinon le premier de la liste.
   const [selected, setSelected] = useState("");
@@ -46,9 +45,8 @@ export default function AdminPointRulesPage() {
     loading,
     refetch,
   } = useApi<PointRule[]>(
-    token && isStaff && gameSlug ? `/api/point-rules?game=${gameSlug}` : null,
-    [token, isStaff, gameSlug],
-    authHeader,
+    isStaff && gameSlug ? `/api/point-rules?game=${gameSlug}` : null,
+    [isStaff, gameSlug],
   );
 
   if (authLoading) {
@@ -56,7 +54,7 @@ export default function AdminPointRulesPage() {
       <div className="min-h-[50vh] grid place-items-center text-[var(--text-muted)]">Chargement...</div>
     );
   }
-  if (!token || !isStaff) {
+  if (!isStaff) {
     return (
       <div className="min-h-[50vh] grid place-items-center text-[var(--text-muted)]">
         <div className="flex flex-col items-center gap-3">
@@ -108,7 +106,7 @@ export default function AdminPointRulesPage() {
       ) : (
         <div className="grid lg:grid-cols-[1fr_300px] gap-6 items-start">
           <div>
-            <AddRuleForm gameId={game.id} authHeader={authHeader} onAdded={refetch} />
+            <AddRuleForm gameId={game.id} onAdded={refetch} />
 
             {loading ? (
               <div className="text-center py-12 text-[var(--text-muted)]">Chargement...</div>
@@ -123,7 +121,6 @@ export default function AdminPointRulesPage() {
                       key={tier}
                       tier={tier}
                       rules={tierRules}
-                      authHeader={authHeader}
                       onChanged={refetch}
                     />
                   );

@@ -1,31 +1,33 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
-import { ok, badRequest, notFound, serverError } from "@/lib/api";
+import { ok, badRequest, notFound, unauthorized, forbidden, handleApiError } from "@/lib/api";
+import { getAuthUser, isStaff } from "@/lib/auth";
+import { parseBody, userRoleSchema } from "@/lib/validation";
 
 type Params = { params: Promise<{ id: string }> };
-
-const VALID_ROLES = ["ADMIN", "MODERATOR", "PLAYER", "VISITOR"];
 
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
-    const { role } = await request.json() as { role: string };
 
-    if (!VALID_ROLES.includes(role)) {
-      return badRequest(`Rôle invalide. Valeurs : ${VALID_ROLES.join(", ")}`);
-    }
+    const actor = await getAuthUser(request);
+    if (!actor) return unauthorized();
+    if (!isStaff(actor.role)) return forbidden("Réservé à l'administration.");
+    if (actor.id === id) return badRequest("Vous ne pouvez pas changer votre propre rôle.");
+
+    const { role } = await parseBody(request, userRoleSchema);
 
     const user = await db.user.findUnique({ where: { id }, select: { id: true } });
     if (!user) return notFound("Utilisateur introuvable");
 
     const updated = await db.user.update({
       where: { id },
-      data: { role: role as never },
+      data: { role },
       select: { id: true, username: true, role: true },
     });
 
     return ok(updated);
-  } catch {
-    return serverError();
+  } catch (e) {
+    return handleApiError(e);
   }
 }

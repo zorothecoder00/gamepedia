@@ -3,10 +3,10 @@ import { db } from "@/lib/prisma";
 import {
   paginated,
   created,
-  badRequest,
   unauthorized,
   forbidden,
   getPagination,
+  tooManyRequests,
   handleApiError,
 } from "@/lib/api";
 import { getAuthUser } from "@/lib/auth";
@@ -17,6 +17,8 @@ import {
   hasGameProfile,
   DEFAULT_COMMISSION_RATE,
 } from "@/lib/wagers";
+import { parseBody, wagerCreateSchema } from "@/lib/validation";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 // GET /api/wagers — lobby des défis (filtres : game, status, mine)
 export async function GET(request: NextRequest) {
@@ -70,7 +72,10 @@ export async function POST(request: NextRequest) {
     if (!user?.player) return unauthorized();
     const challenger = user.player;
 
-    const body = await request.json();
+    if (!checkRateLimit(`wager-create:${challenger.id}`, 20, 60_000)) {
+      return tooManyRequests();
+    }
+
     const {
       gameId,
       opponentId,
@@ -81,21 +86,7 @@ export async function POST(request: NextRequest) {
       commissionRate,
       acceptDeadline,
       playByDate,
-    } = body as {
-      gameId?: string;
-      opponentId?: string;
-      stakeAmount?: number;
-      title?: string;
-      terms?: string;
-      visibility?: "PUBLIC" | "PRIVATE";
-      commissionRate?: number;
-      acceptDeadline?: string;
-      playByDate?: string;
-    };
-
-    if (!gameId || !title || stakeAmount == null) {
-      return badRequest("gameId, title et stakeAmount sont requis.");
-    }
+    } = await parseBody(request, wagerCreateSchema);
 
     await assertCanWager(challenger);
     assertValidStake(stakeAmount);

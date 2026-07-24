@@ -12,8 +12,274 @@ Dans Next.js App Router, tous les composants sont
 -Les stubs password/reset et password/confirm (réinitialisation par email)
   restent hors périmètre — ils nécessitent un token de reset stocké en base,
   c'est une feature à part
-
+  
 
 -Tout compile et lint proprement. Il ne te reste qu'à renseigner deux secrets
   (JWT_SECRET déjà en dev, UPLOADTHING_TOKEN à créer)
+
+
+Contexte
+
+ L'audit du 2026-07-24 a montré une app fonctionnellement riche mais avec des
+ trous de robustesse réels, aggravés par le fait qu'un module (Wagers) gère de
+ l'argent réel entre joueurs. En creusant pour ce plan, une faille critique est
+ apparue : 6 routes /api/admin/* n'ont aucune vérification d'authentification,
+ dont PATCH /api/admin/users/[id]/role — n'importe quel appelant non
+ authentifié peut actuellement se promouvoir ADMIN. Le reste des manques (token
+ JWT en localStorage exposé au XSS, protection admin uniquement côté client,
+ aucune validation de schéma sur les entrées API, aucun rate limiting, fallback
+ mot de passe en clair) a été confirmé par lecture directe du code.
+
+ Objectif de cette passe : fermer ces trous sans casser l'UX ni l'architecture
+ existante (JWT + jose, Prisma direct, hooks useApi/useMutation/useAuth). Les
+ tests et la CI restent hors périmètre (passe suivante).
+
+ Étape 0 — Corriger les 6 routes admin sans auth (priorité absolue, isolé,
+ rapide)
+
+ Ajouter le garde const user = await getAuthUser(request); if (!user) return
+ unauthorized(); if (!isStaff(user.role)) return forbidden(); (pattern déjà
+ utilisé correctement dans app/api/admin/users/[id]/route.ts PATCH) aux
+ fichiers :
+ - app/api/admin/users/[id]/role/route.ts (le plus critique — élévation de
+ privilège)
+ - app/api/admin/users/[id]/verify/route.ts
+ - app/api/admin/users/route.ts (GET liste — expose emails/rôles de tous les
+ users)
+ - app/api/admin/dashboard/route.ts
+ - app/api/admin/import/route.ts
+ - app/api/admin/logs/route.ts
+
+ Import à ajouter : getAuthUser, isStaff depuis @/lib/auth.
+
+ Étape 1 — middleware.ts : protection serveur de /admin/* et /api/admin/*
+
+ Nouveau fichier middleware.ts à la racine (sibling de app/). Protège en
+ profondeur (l'étape 0 corrige les routes individuellement, le middleware
+ ajoute un filet qui bloque tout futur oubli) :
+ - matcher: ["/admin/:path*", "/api/admin/:path*"]
+ - Lit le cookie de session (voir étape 2), vérifie le JWT via une fonction
+ edge-safe, lit le rôle directement dans le payload du token (déjà présent —
+ pas besoin d'appel Prisma en Edge).
+ - Si invalide/absent ou rôle hors ADMIN/MODERATOR : redirection vers
+ /auth/login pour les routes de page, réponse JSON 401/403 pour les routes
+ /api/* (distinguer via request.nextUrl.pathname.startsWith("/api/")).
+
+ Pour que ce fichier tourne sur l'Edge runtime sans embarquer bcryptjs
+ (Node-only), extraire les fonctions JWT de lib/auth.ts vers un nouveau
+ lib/auth-edge.ts (pas de dépendance à bcryptjs ni Prisma) :
+ - getSecretKey(), JWT_ISSUER, signToken(), une nouvelle verifyAuthToken(token)
+ qui retourne { userId, role } | null.
+ lib/auth.ts réimporte ces fonctions depuis lib/auth-edge.ts et garde
+ hashPassword/verifyPassword/isBcryptHash/getAuthUser/isStaff (Node/Prisma).
+
+ Étape 2 — Migration du JWT : localStorage → cookie httpOnly
+
+ Ferme la faille XSS la plus sérieuse (vol de token). Cookie nommé gp_session,
+ httpOnly, sameSite: "lax", secure en prod, path: "/", maxAge: 604800 (7j,
+ aligné sur JWT_EXPIRATION).
+
+ Côté serveur :
+ - lib/auth.ts → getUserIdFromRequest lit d'abord
+ request.cookies.get("gp_session")?.value, avec le header Authorization: Bearer
+ en repli (utile pour tests/outils externes).
+ - app/api/auth/login/route.ts : pose le cookie sur la NextResponse au lieu de
+ renvoyer token dans le corps JSON (ne renvoie plus que { user }).
+ - app/api/auth/logout/route.ts : remplace le TODO par un vrai effacement du
+ cookie (maxAge: 0).
+
+ Côté client, le principe : un fetch same-origin envoie déjà le cookie
+ automatiquement, donc plus besoin de construire/transmettre un authHeader
+ manuellement.
+ - app/auth/login/page.tsx : supprime
+ localStorage.setItem("gp_token"/"gp_user", ...), redirige simplement après
+ succès.
+ - hooks/useAuth.ts : supprime la lecture localStorage.getItem("gp_token"),
+ appelle /api/auth/me sans condition, expose { me, player, loading } (plus de
+ token/authHeader).
+ - Pattern à répliquer (décrit une fois, appliqué partout) : remplacer if
+ (!token) router.push("/auth/login") par if (!loading && !me)
+ router.push("/auth/login"), et supprimer la construction locale d'authHeader
+ passée à useApi/useMutation. Fichiers représentatifs :
+   - app/profile/page.tsx (réimplémente actuellement sa propre logique de token
+ au lieu d'utiliser useAuth — à aligner sur le hook partagé)
+   - app/admin/players/page.tsx (représentatif des 9 pages admin/*)
+   - app/wagers/page.tsx et app/wagers/[id]/page.tsx
+   - Les autres fichiers listés par grep -l "authHeader" suivent le même
+ remplacement mécanique.
+ - docs/api-routes.md : mettre à jour la note de convention auth (cookie au
+ lieu de Bearer), et ajouter au passage les sections manquantes (Wagers,
+ admin/payment-accounts, admin/disputes) déjà repérées comme absentes.
+
+ Étape 3 — Headers de sécurité
+
+ next.config.ts → ajouter async headers() à côté de images déjà présent :
+ X-Content-Type-Options: nosniff, X-Frame-Options: DENY, Referrer-Policy:
+ strict-origin-when-cross-origin, Permissions-Policy minimal, et un CSP
+ pragmatique (default-src 'self', img-src incluant *.ufs.sh, 'unsafe-inline'
+ pour styles/scripts — compromis assumé et documenté en commentaire ; un CSP
+ strict par nonce serait un chantier séparé).
+
+ Étape 4 — Suppression du fallback mot de passe en clair
+
+ Avant de toucher au code : requête en base (SELECT id FROM "User" WHERE
+ "passwordHash" NOT LIKE '$2%') pour vérifier qu'aucun compte n'est encore en
+ clair.
+ - Si aucun résultat → simplifier verifyPassword dans lib/auth.ts pour ne
+ garder que la comparaison bcrypt, supprimer isBcryptHash et la branche de
+ migration douce dans login/route.ts.
+ - Si des comptes en clair subsistent → ne pas supprimer, signaler la liste à
+ l'utilisateur pour décider (reset forcé ou reconnexion).
+
+ Étape 5 — Validation des entrées (zod) sur les routes sensibles
+
+ - Ajouter la dépendance zod.
+ - lib/validation.ts : helper parseBody<T>(request, schema) qui parse le JSON
+ et valide, et exporte les schémas.
+ - Étendre handleApiError dans lib/api.ts pour reconnaître une ZodError et
+ renvoyer un 400 structuré (au lieu du 500 générique actuel pour toute
+ exception non-WagerError).
+ - Appliquer aux routes à plus fort risque (~11-13 routes, liste affinée
+ pendant l'implémentation selon la présence réelle d'un body) :
+   - Auth : register, login, me (PATCH), password/reset, password/confirm
+   - Wagers : POST /api/wagers (création), [id]/deposit, [id]/report,
+ [id]/dispute
+   - Admin argent : admin/payment-accounts (POST), admin/disputes/[id]/resolve,
+ admin/users/[id]/role (PATCH — au passage, valider aussi que l'acteur ne se
+ modifie pas lui-même comme le fait déjà [id]/route.ts pour isActive),
+ admin/users/[id] (PATCH)
+
+ Étape 6 — Rate limiting basique
+
+ - lib/rate-limit.ts : limiteur en mémoire (fenêtre glissante, Map<clé, {count,
+ resetAt}>), clé = IP pour les routes non authentifiées, playerId pour les
+ routes authentifiées.
+ - tooManyRequests() ajouté à lib/api.ts (429).
+ - Appliqué en première vérification sur : auth/login, auth/register (par IP),
+ wagers POST/deposit/report/dispute (par joueur).
+ - Limite assumée : store en mémoire du process — correct pour un déploiement
+ next start mono-process (ce qui correspond au script build/start actuel), mais
+ ne fonctionnerait pas correctement sur du serverless multi-instance (Vercel
+ Functions). À noter en commentaire ; migration vers Upstash Redis si le
+ déploiement change.
+
+ Vérification
+
+ - npm run check (lint + tsc --noEmit + next build) doit passer sans erreur.
+ - Parcours manuel (l'utilisateur lance next dev lui-même) :
+   a. Register → Login → vérifier qu'aucun gp_token n'apparaît dans
+ localStorage (DevTools) et que le cookie gp_session est bien httpOnly
+ (Application → Cookies).
+   b. /profile accessible sans header manuel ; Logout → /profile redirige vers
+ login.
+   c. Se connecter avec un compte rôle PLAYER, tenter /admin → redirection ;
+ tenter curl -X PATCH /api/admin/users/<id>/role sans cookie → 401 (avant le
+ fix : succès inattendu).
+   d. 6 tentatives de login avec mauvais mot de passe en boucle rapide → 429
+ après la limite.
+   e. Créer un wager avec un champ requis manquant → 400 avec message de
+ validation zod au lieu d'un 500 générique.
+
+
+
+
+
+
+
+
+
+
+
+
+
+Voici mon analyse. Le code existant est propre et bien structuré, mais l'audit
+  fait ressortir trois catégories de manques : des failles de robustesse
+  réelles (indépendantes du nombre de fonctionnalités), des fonctionnalités à
+  moitié câblées (le back-end existe mais rien ne les expose), et des capacités
+  manquantes qui rendraient l'app plus « vivante ».
+
+  🔴 Robustesse — à traiter avant d'ajouter des features
+
+  1. Pas de middleware.ts — les pages /admin/* ne sont protégées que côté client
+  (useAuth + check du rôle en React). N'importe qui peut voir le HTML/JS de ces
+  pages ; seules les routes API sont réellement gardées. Un middleware Edge qui
+  vérifie le JWT et le rôle avant de servir /admin/* est un correctif rapide et
+  à fort impact.
+  2. JWT en localStorage — exposé à toute XSS. Passer à un cookie httpOnly +
+  SameSite=Strict supprime cette classe de risque.
+  3. Aucune validation de schéma — les routes API parsent le JSON à la main,
+  sans zod. Avec 60+ routes et un module financier (wagers), c'est le genre de
+  trou qui finit par produire des crashs ou des données incohérentes en base.
+  4. Zéro rate limiting — login, register, wagers/deposit, wagers/report sont
+  ouverts au brute-force/abus.
+  5. verifyPassword accepte encore les mots de passe en clair (mode de compat) —
+  à vérifier que la migration est terminée, puis supprimer ce chemin.
+  6. Zéro test, zéro CI — sur un module qui gère de l'argent réel (wagers,
+  escrow, litiges), c'est le risque le plus sérieux du projet. Un seul test de
+  la machine à états des wagers (lib/wagers.ts) vaudrait plus que 10 features.
+
+  🟡  Fonctionnalités déjà à moitié construites (gros gap valeur/effort)
+
+  - Notifications : le modèle Notification existe, notifyPlayer() écrit en base
+  à chaque événement wager — mais aucune page ni cloche dans la Navbar ne les
+  affiche. C'est du travail déjà fait côté back qui ne sert à rien tant qu'il
+  n'y a pas d'UI.
+  - /api/auth/email/resend est appelée par /auth/verify-email mais n'existe pas
+  → bouton cassé en prod.
+  - Reset de mot de passe : stub sans token (déjà noté comme hors périmètre,
+  mais bloque /auth/reset-password qui existe côté UI).
+  - Bracket "temps réel" : documenté comme tel, mais c'est un fetch unique sans
+  rafraîchissement.
+  - Bouton "Supprimer mon compte" dans /profile non câblé.
+
+  🟢  Ce qui rendrait l'app réellement plus puissante
+
+  Ajout: SSE ou polling léger sur bracket/wagers/matchs en direct
+  Pourquoi: Le cas d'usage esport par excellence : suivre un match qui évolue.
+  Pas besoin de websockets lourds, un simple EventSource + route handler
+  suffit.
+  ────────────────────────────────────────
+  Ajout: TanStack Query en remplacement de useApi/useMutation maison
+  Pourquoi: Cache partagé, dédup de requêtes, retry, invalidation propre — les
+  hooks actuels refetchent tout à chaque montage sans cache.
+  ────────────────────────────────────────
+  Ajout: Recherche globale unifiée
+  Pourquoi: Aujourd'hui la recherche est dupliquée dans 17 routes API sans
+  mutualisation. Une barre de recherche site-wide
+  (joueurs/équipes/tournois/articles) change beaucoup l'expérience.
+  ────────────────────────────────────────
+  Ajout: Cache/ISR sur les pages publiques
+  Pourquoi: Accueil, classements, tournois refont du Prisma direct à chaque
+  requête sans revalidate — coûteux en charge, gain facile.
+  ────────────────────────────────────────
+  Ajout: Emails transactionnels (Resend)
+  Pourquoi: Débloque reset password + resend verify-email, qui sont des parcours
+
+  utilisateurs actuellement cassés.
+  ────────────────────────────────────────
+  Ajout: Embed stream
+  Pourquoi: streamUrl/vodUrl existent déjà dans Match mais ne sont affichés
+  nulle
+  part — quick win.
+  ────────────────────────────────────────
+  Ajout: SEO (sitemap, OG images dynamiques, metadata par page)
+  Pourquoi: Aucune config actuellement ; important pour la visibilité publique
+  d'une plateforme communautaire.
+  ────────────────────────────────────────
+  Ajout: Extraction de composants (BracketViewer, MatchCard, RankingTable)
+  Pourquoi: Documentés comme prévus mais codés inline dans chaque page →
+  duplication, et bloque le temps réel (pas de point unique à mettre à jour).
+
+  Incohérences mineures à nettoyer
+
+  - docs/api-routes.md/pages.md ne documentent pas du tout le module Wagers,
+  admin/payment-accounts, admin/disputes.
+  - Duplication Navbar/Footer entre app/page.tsx (inline) et app/components/.
+  - Game.platforms stocké en CSV string plutôt qu'en array Postgres natif.
+
+
+
+
+
+
 

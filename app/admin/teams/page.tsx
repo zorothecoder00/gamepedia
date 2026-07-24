@@ -22,7 +22,7 @@ interface AdminTeam {
 }
 
 export default function AdminTeamsPage() {
-  const { token, me, authHeader, loading: authLoading } = useAuth();
+  const { me, loading: authLoading } = useAuth();
   const isStaff = me?.role === "ADMIN" || me?.role === "MODERATOR";
   const [search, setSearch] = useState("");
 
@@ -32,15 +32,14 @@ export default function AdminTeamsPage() {
     loading,
     refetch,
   } = useApi<AdminTeam[]>(
-    token && isStaff ? `/api/teams?all=true&limit=100${q}` : null,
-    [token, isStaff, search],
-    authHeader,
+    isStaff ? `/api/teams?all=true&limit=100${q}` : null,
+    [isStaff, search],
   );
 
   if (authLoading) {
     return <div className="min-h-[50vh] grid place-items-center text-[var(--text-muted)]">Chargement...</div>;
   }
-  if (!token || !isStaff) {
+  if (!isStaff) {
     return (
       <div className="min-h-[50vh] grid place-items-center text-[var(--text-muted)]">
         <div className="flex flex-col items-center gap-3">
@@ -75,7 +74,7 @@ export default function AdminTeamsPage() {
       ) : (
         <div className="flex flex-col gap-2.5">
           {teams.map((t) => (
-            <TeamRow key={t.id} team={t} authHeader={authHeader} onChanged={refetch} />
+            <TeamRow key={t.id} team={t} onChanged={refetch} />
           ))}
         </div>
       )}

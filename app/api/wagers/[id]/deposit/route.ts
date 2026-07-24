@@ -2,15 +2,16 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
 import {
   ok,
-  badRequest,
   notFound,
   unauthorized,
   forbidden,
+  tooManyRequests,
   handleApiError,
 } from "@/lib/api";
 import { getAuthUser } from "@/lib/auth";
 import { isParticipant } from "@/lib/wagers";
-import type { PaymentMethodType } from "@prisma/client";
+import { parseBody, wagerDepositSchema } from "@/lib/validation";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -22,6 +23,10 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (!user?.player) return unauthorized();
     const playerId = user.player.id;
 
+    if (!checkRateLimit(`wager-deposit:${playerId}`, 20, 60_000)) {
+      return tooManyRequests();
+    }
+
     const wager = await db.wager.findUnique({ where: { id } });
     if (!wager) return notFound("Défi introuvable");
     if (!isParticipant(wager, playerId)) return forbidden();
@@ -29,13 +34,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       return forbidden("Les dépôts ne sont pas ouverts pour ce défi.");
     }
 
-    const body = await request.json();
-    const { methodType, proofUrl, reference } = body as {
-      methodType?: PaymentMethodType;
-      proofUrl?: string;
-      reference?: string;
-    };
-    if (!methodType) return badRequest("methodType est requis.");
+    const { methodType, proofUrl, reference } = await parseBody(request, wagerDepositSchema);
 
     // Le dépôt vaut toujours la mise convenue
     const deposit = await db.wagerDeposit.upsert({

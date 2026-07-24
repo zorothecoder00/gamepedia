@@ -34,7 +34,7 @@ const FILTERS = [
 const NEXT_STATUS: string[] = ["UPCOMING", "ONGOING", "COMPLETED", "CANCELLED"];
 
 export default function AdminTournamentsPage() {
-  const { token, me, authHeader, loading: authLoading } = useAuth();
+  const { me, loading: authLoading } = useAuth();
   const isStaff = me?.role === "ADMIN" || me?.role === "MODERATOR";
   const [filter, setFilter] = useState("");
 
@@ -44,9 +44,8 @@ export default function AdminTournamentsPage() {
     loading,
     refetch,
   } = useApi<AdminTournament[]>(
-    token && isStaff ? `/api/tournaments?limit=100${query}` : null,
-    [token, isStaff, filter],
-    authHeader,
+    isStaff ? `/api/tournaments?limit=100${query}` : null,
+    [isStaff, filter],
   );
 
   if (authLoading) {
@@ -57,7 +56,7 @@ export default function AdminTournamentsPage() {
     );
   }
 
-  if (!token || !isStaff) {
+  if (!isStaff) {
     return (
       <div className="min-h-[50vh] grid place-items-center text-[var(--text-muted)]">
         <div className="flex flex-col items-center gap-3">
@@ -110,7 +109,6 @@ export default function AdminTournamentsPage() {
             <TournamentRow
               key={t.id}
               tournament={t}
-              authHeader={authHeader}
               onChanged={refetch}
             />
           ))}

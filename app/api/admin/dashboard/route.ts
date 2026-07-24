@@ -1,8 +1,14 @@
+import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
-import { ok, serverError } from "@/lib/api";
+import { ok, unauthorized, forbidden, serverError } from "@/lib/api";
+import { getAuthUser, isStaff } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const actor = await getAuthUser(request);
+    if (!actor) return unauthorized();
+    if (!isStaff(actor.role)) return forbidden("Réservé à l'administration.");
+
     const [
       totalPlayers,
       totalTournaments,

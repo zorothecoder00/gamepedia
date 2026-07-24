@@ -6,9 +6,10 @@ import {
   notFound,
   unauthorized,
   forbidden,
-  serverError,
+  handleApiError,
 } from "@/lib/api";
 import { getAuthUser, isStaff } from "@/lib/auth";
+import { parseBody, userActiveSchema } from "@/lib/validation";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -22,8 +23,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     if (!isStaff(actor.role)) return forbidden("Réservé à l'administration.");
     if (actor.id === id) return badRequest("Vous ne pouvez pas désactiver votre propre compte.");
 
-    const { isActive } = (await request.json()) as { isActive?: boolean };
-    if (typeof isActive !== "boolean") return badRequest("isActive (booléen) requis.");
+    const { isActive } = await parseBody(request, userActiveSchema);
 
     const user = await db.user.findUnique({ where: { id }, select: { id: true } });
     if (!user) return notFound("Utilisateur introuvable");
@@ -47,7 +47,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     });
 
     return ok(updated);
-  } catch {
-    return serverError();
+  } catch (e) {
+    return handleApiError(e);
   }
 }

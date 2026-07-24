@@ -9,8 +9,8 @@ Toutes les routes sont sous `/api/`. Le préfixe complet est `/api/[route]`.
 | Méthode | Route | Description |
 |---------|-------|-------------|
 | `POST` | `/api/auth/register` | Créer un compte utilisateur |
-| `POST` | `/api/auth/login` | Connexion — retourne un token JWT |
-| `POST` | `/api/auth/logout` | Déconnexion (invalide le token) |
+| `POST` | `/api/auth/login` | Connexion — pose le cookie de session `gp_session` (httpOnly) |
+| `POST` | `/api/auth/logout` | Déconnexion — efface le cookie de session |
 | `GET` | `/api/auth/me` | Récupérer le profil de l'utilisateur connecté |
 | `PATCH` | `/api/auth/me` | Mettre à jour son profil |
 | `POST` | `/api/auth/password/reset` | Demander une réinitialisation de mot de passe |
@@ -181,12 +181,39 @@ Toutes les routes sont sous `/api/`. Le préfixe complet est `/api/[route]`.
 
 | Méthode | Route | Description |
 |---------|-------|-------------|
-| `GET` | `/api/admin/dashboard` | Statistiques globales de la plateforme |
-| `GET` | `/api/admin/users` | Gestion des utilisateurs |
-| `PATCH` | `/api/admin/users/[id]/role` | Changer le rôle d'un utilisateur |
-| `POST` | `/api/admin/users/[id]/verify` | Vérifier un joueur |
-| `GET` | `/api/admin/logs` | Logs d'activité admin |
-| `POST` | `/api/admin/import` | Import bulk de données (CSV/JSON) |
+| `GET` | `/api/admin/dashboard` | Statistiques globales de la plateforme (staff) |
+| `GET` | `/api/admin/users` | Gestion des utilisateurs (staff) |
+| `PATCH` | `/api/admin/users/[id]` | Activer/désactiver un compte (staff) |
+| `PATCH` | `/api/admin/users/[id]/role` | Changer le rôle d'un utilisateur (staff) |
+| `POST` | `/api/admin/users/[id]/verify` | Vérifier un joueur (staff) |
+| `GET` | `/api/admin/logs` | Logs d'activité admin (staff) |
+| `POST` | `/api/admin/import` | Import bulk de données (CSV/JSON) (staff) |
+| `GET` | `/api/admin/payment-accounts` | Comptes de réception des dépôts wagers (auth) |
+| `POST` | `/api/admin/payment-accounts` | Créer un compte de réception (staff) |
+| `GET` | `/api/admin/disputes` | Lister les litiges de wagers (staff) |
+| `POST` | `/api/admin/disputes/[id]/resolve` | Trancher un litige de wager (staff) |
+
+Toutes les routes `/api/admin/*` sont également protégées en amont par `middleware.ts` (redirection/401 avant même d'atteindre le handler).
+
+---
+
+## Wagers (paris entre joueurs)
+
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| `GET` | `/api/wagers` | Lobby des défis (filtres : game, status, mine) |
+| `POST` | `/api/wagers` | Créer un défi (auth requis) |
+| `GET` | `/api/wagers/[id]` | Détail complet d'un défi |
+| `POST` | `/api/wagers/[id]/accept` | Rejoindre un défi ouvert |
+| `POST` | `/api/wagers/[id]/agree` | Valider les termes (chaque participant) |
+| `POST` | `/api/wagers/[id]/cancel` | Annuler un défi |
+| `POST` | `/api/wagers/[id]/deposit` | Déclarer le dépôt de sa mise |
+| `POST` | `/api/wagers/[id]/deposit/confirm` | Confirmer un dépôt (staff) |
+| `POST` | `/api/wagers/[id]/report` | Déclarer le résultat du match |
+| `POST` | `/api/wagers/[id]/dispute` | Ouvrir un litige |
+| `POST` | `/api/wagers/[id]/payout` | Verser les gains (staff) |
+| `GET/POST` | `/api/players/[pseudo]/payout-methods` | Coordonnées de réception du joueur |
+| `PATCH/DELETE` | `/api/payout-methods/[id]` | Modifier/supprimer un moyen de réception |
 
 ---
 
@@ -200,6 +227,6 @@ Toutes les routes sont sous `/api/`. Le préfixe complet est `/api/[route]`.
 
 ---
 
-> **Authentification** : Les routes protégées nécessitent un header `Authorization: Bearer <token>`.
+> **Authentification** : Les routes protégées lisent le cookie de session httpOnly `gp_session`, posé automatiquement à la connexion et envoyé par le navigateur sur chaque requête same-origin. Le header `Authorization: Bearer <token>` reste accepté en repli (outils externes, tests).
 > **Pagination** : Les routes de liste acceptent les params `?page=1&limit=20`.
 > **Filtres** : Les routes de liste acceptent des query params de filtre spécifiques à chaque ressource.

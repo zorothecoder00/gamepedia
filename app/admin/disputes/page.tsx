@@ -35,7 +35,7 @@ interface Dispute {
 }
 
 export default function AdminDisputesPage() {
-  const { token, me, authHeader, loading: authLoading } = useAuth();
+  const { me, loading: authLoading } = useAuth();
   const isStaff = me?.role === "ADMIN" || me?.role === "MODERATOR";
 
   const {
@@ -43,9 +43,8 @@ export default function AdminDisputesPage() {
     loading,
     refetch,
   } = useApi<Dispute[]>(
-    token && isStaff ? "/api/admin/disputes?status=OPEN" : null,
-    [token, isStaff],
-    authHeader,
+    isStaff ? "/api/admin/disputes?status=OPEN" : null,
+    [isStaff],
   );
 
   if (authLoading) {
@@ -56,7 +55,7 @@ export default function AdminDisputesPage() {
     );
   }
 
-  if (!token || !isStaff) {
+  if (!isStaff) {
     return (
       <div className="min-h-[50vh] grid place-items-center flex-col gap-3 text-[var(--text-muted)]">
         <p>Accès réservé à l&apos;administration.</p>
@@ -96,7 +95,6 @@ export default function AdminDisputesPage() {
             <DisputeCard
               key={d.id}
               dispute={d}
-              authHeader={authHeader}
               onResolved={refetch}
             />
           ))}

@@ -2,54 +2,32 @@
 // GAMEPEDIA TG — Helpers d'authentification (partagés)
 //
 // Auth par JWT signé (jose) + hash de mot de passe (bcryptjs).
-// Le token est transmis en Bearer dans l'en-tête Authorization
-// et stocké côté client dans localStorage (`gp_token`).
+// Le token est transmis via le cookie httpOnly `gp_session`
+// (voir lib/auth-edge.ts), avec repli sur l'en-tête
+// Authorization: Bearer pour les clients externes (tests, outils).
+// Les fonctions JWT compatibles Edge sont dans lib/auth-edge.ts
+// (utilisées par middleware.ts, qui ne peut pas embarquer bcryptjs).
 // ============================================================
 
 import { NextRequest } from "next/server";
-import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 import { db } from "./prisma";
+import { AUTH_COOKIE, signToken, verifyAuthToken } from "./auth-edge";
 
-const JWT_ISSUER = "gamepedia-tg";
-const JWT_EXPIRATION = "7d";
+export { signToken };
 
-/** Clé de signature dérivée de JWT_SECRET (échoue tôt si absente). */
-function getSecretKey(): Uint8Array {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    throw new Error("JWT_SECRET manquant dans l'environnement");
-  }
-  return new TextEncoder().encode(secret);
-}
-
-/** Signe un JWT contenant l'identifiant utilisateur (sub) et son rôle. */
-export async function signToken(user: { id: string; role: string }): Promise<string> {
-  return new SignJWT({ role: user.role })
-    .setProtectedHeader({ alg: "HS256" })
-    .setSubject(user.id)
-    .setIssuer(JWT_ISSUER)
-    .setIssuedAt()
-    .setExpirationTime(JWT_EXPIRATION)
-    .sign(getSecretKey());
-}
-
-/** Extrait l'userId depuis un JWT valide de l'en-tête Authorization. */
+/** Extrait l'userId depuis le cookie de session, avec repli sur l'en-tête Authorization. */
 export async function getUserIdFromRequest(
   request: NextRequest,
 ): Promise<string | null> {
+  const cookieToken = request.cookies.get(AUTH_COOKIE)?.value;
   const auth = request.headers.get("authorization");
-  if (!auth?.startsWith("Bearer ")) return null;
-  const token = auth.slice(7);
-  try {
-    const { payload } = await jwtVerify(token, getSecretKey(), {
-      issuer: JWT_ISSUER,
-    });
-    return typeof payload.sub === "string" ? payload.sub : null;
-  } catch {
-    // Token invalide, expiré ou signature incorrecte.
-    return null;
-  }
+  const headerToken = auth?.startsWith("Bearer ") ? auth.slice(7) : null;
+  const token = cookieToken ?? headerToken;
+  if (!token) return null;
+
+  const result = await verifyAuthToken(token);
+  return result?.userId ?? null;
 }
 
 /** Charge l'utilisateur authentifié avec son joueur lié, ou null. */
@@ -76,23 +54,7 @@ export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, BCRYPT_ROUNDS);
 }
 
-/** Vrai si la chaîne ressemble à un hash bcrypt ($2a$/$2b$/$2y$). */
-export function isBcryptHash(value: string): boolean {
-  return /^\$2[aby]\$/.test(value);
-}
-
-/**
- * Vérifie un mot de passe contre un hash stocké.
- * Tolère les anciens enregistrements en clair (migration douce) :
- * `upgraded` vaut true quand l'appelant doit ré-écrire un vrai hash.
- */
-export async function verifyPassword(
-  password: string,
-  stored: string,
-): Promise<{ valid: boolean; upgraded: boolean }> {
-  if (isBcryptHash(stored)) {
-    return { valid: await bcrypt.compare(password, stored), upgraded: false };
-  }
-  // Ancien format : mot de passe stocké en clair.
-  return { valid: password === stored, upgraded: password === stored };
+/** Vérifie un mot de passe contre un hash bcrypt stocké. */
+export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  return bcrypt.compare(password, stored);
 }

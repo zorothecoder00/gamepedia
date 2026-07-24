@@ -18,7 +18,7 @@ const TABS = [
 ];
 
 export default function WagersPage() {
-  const { token, player, authHeader } = useAuth();
+  const { player, isAuthenticated } = useAuth();
   const [tab, setTab] = useState("lobby");
   const [gameFilter, setGameFilter] = useState("");
   const [showCreate, setShowCreate] = useState(false);
@@ -37,9 +37,8 @@ export default function WagersPage() {
     loading,
     refetch,
   } = useApi<ApiWager[]>(
-    mine && !token ? null : `/api/wagers?${params.toString()}`,
-    [tab, gameFilter, page, token],
-    mine ? authHeader : undefined,
+    mine && !isAuthenticated ? null : `/api/wagers?${params.toString()}`,
+    [tab, gameFilter, page, isAuthenticated],
   );
 
   const { data: games } = useApi<{ name: string; slug: string }[]>("/api/games");
@@ -57,7 +56,7 @@ export default function WagersPage() {
             l&apos;administration.
           </p>
         </div>
-        {token && player && (
+        {player && (
           <button
             onClick={() => setShowCreate((v) => !v)}
             className="px-4 py-2 rounded-lg border-none font-semibold text-sm cursor-pointer bg-[var(--accent-green)] text-black hover:opacity-90 transition-opacity"
@@ -67,10 +66,9 @@ export default function WagersPage() {
         )}
       </div>
 
-      {showCreate && token && player && (
+      {showCreate && player && (
         <CreateWagerForm
           games={games ?? []}
-          authHeader={authHeader}
           onCreated={() => {
             setShowCreate(false);
             setTab("mine");
@@ -118,7 +116,7 @@ export default function WagersPage() {
         )}
       </div>
 
-      {mine && !token ? (
+      {mine && !isAuthenticated ? (
         <div className="text-center py-12 text-[var(--text-muted)]">
           <p className="mb-3">Connectez-vous pour voir vos défis.</p>
           <Link

@@ -24,7 +24,7 @@ const ROLE_COLOR: Record<string, string> = {
 };
 
 export default function AdminUsersPage() {
-  const { token, me, authHeader, loading: authLoading } = useAuth();
+  const { me, loading: authLoading } = useAuth();
   const isStaff = me?.role === "ADMIN" || me?.role === "MODERATOR";
   const [search, setSearch] = useState("");
 
@@ -34,15 +34,14 @@ export default function AdminUsersPage() {
     loading,
     refetch,
   } = useApi<AdminUser[]>(
-    token && isStaff ? `/api/admin/users?limit=50${q}` : null,
-    [token, isStaff, search],
-    authHeader,
+    isStaff ? `/api/admin/users?limit=50${q}` : null,
+    [isStaff, search],
   );
 
   if (authLoading) {
     return <div className="min-h-[50vh] grid place-items-center text-[var(--text-muted)]">Chargement...</div>;
   }
-  if (!token || !isStaff) {
+  if (!isStaff) {
     return (
       <div className="min-h-[50vh] grid place-items-center text-[var(--text-muted)]">
         <div className="flex flex-col items-center gap-3">
@@ -82,7 +81,6 @@ export default function AdminUsersPage() {
               user={u}
               isSelf={u.id === me?.id}
               canManageRoles={me?.role === "ADMIN"}
-              authHeader={authHeader}
               onChanged={refetch}
             />
           ))}

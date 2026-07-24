@@ -54,27 +54,24 @@ export default function AdminMatchesPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = use(params);
-  const { token, me, authHeader, loading: authLoading } = useAuth();
+  const { me, loading: authLoading } = useAuth();
   const isStaff = me?.role === "ADMIN" || me?.role === "MODERATOR";
 
   const { data: tournament } = useApi<Tournament>(
-    token && isStaff ? `/api/tournaments/${slug}` : null,
-    [token, isStaff],
-    authHeader,
+    isStaff ? `/api/tournaments/${slug}` : null,
+    [isStaff],
   );
   const {
     data: stages,
     loading,
     refetch,
   } = useApi<Stage[]>(
-    token && isStaff ? `/api/tournaments/${slug}/bracket` : null,
-    [token, isStaff],
-    authHeader,
+    isStaff ? `/api/tournaments/${slug}/bracket` : null,
+    [isStaff],
   );
   const attribute = useMutation<AttributionResult>(
     `/api/point-attributions/tournament/${slug}`,
     "POST",
-    authHeader,
   );
 
   if (authLoading) {
@@ -85,7 +82,7 @@ export default function AdminMatchesPage({
     );
   }
 
-  if (!token || !isStaff) {
+  if (!isStaff) {
     return (
       <div className="min-h-[50vh] grid place-items-center text-[var(--text-muted)]">
         <div className="flex flex-col items-center gap-3">
@@ -178,7 +175,6 @@ export default function AdminMatchesPage({
                     <MatchEditor
                       key={m.id}
                       match={m}
-                      authHeader={authHeader}
                       onSaved={refetch}
                     />
                   ))}

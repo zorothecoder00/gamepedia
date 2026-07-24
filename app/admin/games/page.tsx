@@ -31,7 +31,7 @@ const slugify = (s: string) =>
   s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
 export default function AdminGamesPage() {
-  const { token, me, authHeader, loading: authLoading } = useAuth();
+  const { me, loading: authLoading } = useAuth();
   const isStaff = me?.role === "ADMIN" || me?.role === "MODERATOR";
 
   const {
@@ -39,15 +39,14 @@ export default function AdminGamesPage() {
     loading,
     refetch,
   } = useApi<AdminGame[]>(
-    token && isStaff ? "/api/games?all=true" : null,
-    [token, isStaff],
-    authHeader,
+    isStaff ? "/api/games?all=true" : null,
+    [isStaff],
   );
 
   if (authLoading) {
     return <div className="min-h-[50vh] grid place-items-center text-[var(--text-muted)]">Chargement...</div>;
   }
-  if (!token || !isStaff) {
+  if (!isStaff) {
     return (
       <div className="min-h-[50vh] grid place-items-center text-[var(--text-muted)]">
         <div className="flex flex-col items-center gap-3">
@@ -68,7 +67,7 @@ export default function AdminGamesPage() {
         Ajoutez des jeux et activez/désactivez leur visibilité sur la plateforme.
       </p>
 
-      <AddGameForm authHeader={authHeader} onAdded={refetch} />
+      <AddGameForm onAdded={refetch} />
 
       {loading ? (
         <div className="text-center py-12 text-[var(--text-muted)]">Chargement...</div>
@@ -77,7 +76,7 @@ export default function AdminGamesPage() {
       ) : (
         <div className="flex flex-col gap-2.5 mt-6">
           {games.map((g) => (
-            <GameRow key={g.id} game={g} authHeader={authHeader} onChanged={refetch} />
+            <GameRow key={g.id} game={g} onChanged={refetch} />
           ))}
         </div>
       )}

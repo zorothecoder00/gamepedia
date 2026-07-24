@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import GameTag from "../components/GameTag";
 import { useApi } from "@/hooks/useApi";
 
@@ -78,7 +79,7 @@ export default function TeamsPage() {
                       style={{ background: `${color}20`, border: `1px solid ${color}44` }}
                     >
                       {team.logoUrl
-                        ? <img src={team.logoUrl} alt={team.name} className="w-full h-full object-cover" />
+                        ? <Image src={team.logoUrl} alt={team.name} width={52} height={52} className="w-full h-full object-cover" />
                         : "🛡️"}
                     </div>
                     <div>

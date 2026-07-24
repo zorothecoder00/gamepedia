@@ -6,6 +6,7 @@ import {
   notFound,
   unauthorized,
   forbidden,
+  tooManyRequests,
   handleApiError,
 } from "@/lib/api";
 import { getAuthUser } from "@/lib/auth";
@@ -16,6 +17,8 @@ import {
   markWagerWon,
   notifyPlayer,
 } from "@/lib/wagers";
+import { parseBody, wagerReportSchema } from "@/lib/validation";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -29,6 +32,10 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (!user?.player) return unauthorized();
     const playerId = user.player.id;
 
+    if (!checkRateLimit(`wager-report:${playerId}`, 20, 60_000)) {
+      return tooManyRequests();
+    }
+
     const wager = await db.wager.findUnique({
       where: { id },
       include: { reports: true },
@@ -39,16 +46,8 @@ export async function POST(request: NextRequest, { params }: Params) {
       return forbidden("Le résultat ne peut pas être déclaré à ce stade.");
     }
 
-    const body = await request.json();
-    const { claimedWinnerId, proofUrl, note } = body as {
-      claimedWinnerId?: string;
-      proofUrl?: string;
-      note?: string;
-    };
-    if (
-      !claimedWinnerId ||
-      ![wager.challengerId, wager.opponentId].includes(claimedWinnerId)
-    ) {
+    const { claimedWinnerId, proofUrl, note } = await parseBody(request, wagerReportSchema);
+    if (![wager.challengerId, wager.opponentId].includes(claimedWinnerId)) {
       return badRequest("claimedWinnerId doit être l'un des deux participants.");
     }
 

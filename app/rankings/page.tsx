@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { useApi } from "@/hooks/useApi";
 
 interface RankingEntry {
@@ -51,7 +52,7 @@ export default function RankingsPage() {
                 >
                   <div className="flex items-center gap-3">
                     {game.logoUrl
-                      ? <img src={game.logoUrl} alt={game.name} className="w-7 h-7 object-contain" />
+                      ? <Image src={game.logoUrl} alt={game.name} width={28} height={28} className="w-7 h-7 object-contain" />
                       : <span className="text-2xl">🎮</span>}
                     <div>
                       <div className="font-bold text-[0.95rem] text-[var(--text-primary)]">{game.name}</div>

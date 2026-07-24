@@ -1,20 +1,17 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
-import { created, badRequest, serverError } from "@/lib/api";
+import { created, badRequest, tooManyRequests, handleApiError } from "@/lib/api";
 import { hashPassword } from "@/lib/auth";
+import { parseBody, registerSchema } from "@/lib/validation";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { email, username, password } = body as {
-      email: string;
-      username: string;
-      password: string;
-    };
-
-    if (!email || !username || !password) {
-      return badRequest("email, username et password sont requis");
+    if (!checkRateLimit(`register:${getClientIp(request)}`, 5, 60_000)) {
+      return tooManyRequests();
     }
+
+    const { email, username, password } = await parseBody(request, registerSchema);
 
     const existing = await db.user.findFirst({
       where: { OR: [{ email }, { username }] },
@@ -29,7 +26,7 @@ export async function POST(request: NextRequest) {
     });
 
     return created(user);
-  } catch {
-    return serverError();
+  } catch (e) {
+    return handleApiError(e);
   }
 }

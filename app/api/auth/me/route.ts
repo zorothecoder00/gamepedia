@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
-import { ok, unauthorized, serverError } from "@/lib/api";
+import { ok, unauthorized, serverError, handleApiError } from "@/lib/api";
 import { getUserIdFromRequest } from "@/lib/auth";
+import { parseBody, mePatchSchema } from "@/lib/validation";
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,8 +26,7 @@ export async function PATCH(request: NextRequest) {
     const userId = await getUserIdFromRequest(request);
     if (!userId) return unauthorized();
 
-    const body = await request.json();
-    const { username, email } = body as { username?: string; email?: string };
+    const { username, email } = await parseBody(request, mePatchSchema);
 
     const user = await db.user.update({
       where: { id: userId },
@@ -35,7 +35,7 @@ export async function PATCH(request: NextRequest) {
     });
 
     return ok(user);
-  } catch {
-    return serverError();
+  } catch (e) {
+    return handleApiError(e);
   }
 }

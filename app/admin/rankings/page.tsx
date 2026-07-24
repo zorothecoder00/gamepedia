@@ -30,7 +30,7 @@ function seasonStatus(s: Season): { label: string; color: string } {
 }
 
 export default function AdminRankingsPage() {
-  const { token, me, authHeader, loading: authLoading } = useAuth();
+  const { me, loading: authLoading } = useAuth();
   const isStaff = me?.role === "ADMIN" || me?.role === "MODERATOR";
 
   const {
@@ -38,20 +38,18 @@ export default function AdminRankingsPage() {
     loading,
     refetch,
   } = useApi<Season[]>(
-    token && isStaff ? "/api/seasons" : null,
-    [token, isStaff],
-    authHeader,
+    isStaff ? "/api/seasons" : null,
+    [isStaff],
   );
   const { data: games } = useApi<Game[]>(
-    token && isStaff ? "/api/games" : null,
-    [token, isStaff],
-    authHeader,
+    isStaff ? "/api/games" : null,
+    [isStaff],
   );
 
   const recalcAll = useMutation(
     "/api/rankings/recalculate",
     "POST",
-    authHeader,
+    undefined,
     "Recalcul global déclenché.",
   );
 
@@ -65,7 +63,7 @@ export default function AdminRankingsPage() {
     );
   }
 
-  if (!token || !isStaff) {
+  if (!isStaff) {
     return (
       <div className="min-h-[50vh] grid place-items-center text-[var(--text-muted)]">
         <div className="flex flex-col items-center gap-3">
@@ -120,7 +118,6 @@ export default function AdminRankingsPage() {
       {showCreate && (
         <CreateSeasonForm
           games={games ?? []}
-          authHeader={authHeader}
           onCreated={() => {
             setShowCreate(false);
             refetch();
@@ -146,7 +143,6 @@ export default function AdminRankingsPage() {
                   <SeasonCard
                     key={s.id}
                     season={s}
-                    authHeader={authHeader}
                     onChanged={refetch}
                   />
                 ))}

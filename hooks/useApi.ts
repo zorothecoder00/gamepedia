@@ -19,7 +19,9 @@ export function useApi<T>(
   url: string | null,
   deps: unknown[] = [],
   headers?: Record<string, string>,
+  options?: { silent?: boolean },
 ) {
+  const silent = options?.silent ?? false;
   const [state, setState] = useState<ApiState<T>>({
     data: null,
     meta: null,
@@ -37,7 +39,7 @@ export function useApi<T>(
       .then((res) => {
         if (res.error) {
           setState((s) => ({ ...s, loading: false, error: res.error }));
-          toast.error(res.error);
+          if (!silent) toast.error(res.error);
         } else {
           setState({
             data: res.data ?? null,
@@ -50,10 +52,10 @@ export function useApi<T>(
       .catch(() => {
         const msg = "Erreur réseau";
         setState((s) => ({ ...s, loading: false, error: msg }));
-        toast.error(msg);
+        if (!silent) toast.error(msg);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url, headersStr, ...deps]);
+  }, [url, headersStr, silent, ...deps]);
 
   useEffect(() => {
     refetch();

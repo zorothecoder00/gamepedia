@@ -1,6 +1,8 @@
-import { ok } from "@/lib/api";
+import { NextResponse } from "next/server";
+import { AUTH_COOKIE } from "@/lib/auth-edge";
 
 export async function POST() {
-  // TODO: invalider le token JWT côté serveur (blacklist ou session store)
-  return ok({ message: "Déconnecté avec succès" });
+  const response = NextResponse.json({ data: { message: "Déconnecté avec succès" } });
+  response.cookies.set(AUTH_COOKIE, "", { path: "/", maxAge: 0 });
+  return response;
 }

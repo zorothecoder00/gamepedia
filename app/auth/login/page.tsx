@@ -1,25 +1,38 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { useMutation } from "@/hooks/useMutation";
 
 interface LoginResponse {
-  token: string;
   user: { id: string; email: string; username: string; role: string };
 }
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [form, setForm] = useState({ email: "", password: "", remember: false });
   const [showPassword, setShowPassword] = useState(false);
   const { mutate, loading } = useMutation<LoginResponse>("/api/auth/login");
 
+  useEffect(() => {
+    if (searchParams.get("loggedOut")) {
+      toast.success("Vous avez été déconnecté avec succès.");
+    }
+  }, [searchParams]);
+
   const handleSubmit = async () => {
     const result = await mutate({ email: form.email, password: form.password });
     if (result) {
-      localStorage.setItem("gp_token", result.token);
-      localStorage.setItem("gp_user", JSON.stringify(result.user));
       router.push("/profile");
     }
   };

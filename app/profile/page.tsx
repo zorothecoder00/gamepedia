@@ -138,9 +138,6 @@ function FormInput({ label, value, onChange, type = "text", readOnly = false }: 
 export default function ProfilePage() {
   const router   = useRouter();
   const [activeTab, setActiveTab] = useState(0);
-  const [token]                   = useState<string | null>(() =>
-    typeof window !== "undefined" ? localStorage.getItem("gp_token") : null
-  );
   const [settings, setSettings]   = useState({
     username: "", email: "", bio: "",
     twitter: "", discord: "", youtube: "",
@@ -156,30 +153,26 @@ export default function ProfilePage() {
     youtube:  playerData.socialLinks?.youtube ?? "",
   });
 
+  const { data: me, loading: meLoading } = useApi<Me>("/api/auth/me", [], undefined, { silent: true });
+
   useEffect(() => {
-    if (!token) router.push("/auth/login");
-  }, [token, router]);
-
-  const authHeader = token ? { Authorization: `Bearer ${token}` } : undefined;
-
-  const { data: me, loading: meLoading } = useApi<Me>(
-    token ? "/api/auth/me" : null, [token], authHeader,
-  );
+    if (!meLoading && !me) router.push("/auth/login");
+  }, [meLoading, me, router]);
 
   const player = me?.player;
   const pseudo = player?.pseudo ?? "";
 
   const { data: palmares, loading: palmaresLoading } = useApi<PalmaresEntry[]>(
     activeTab === 1 && pseudo ? `/api/players/${pseudo}/tournaments` : null,
-    [activeTab, pseudo], authHeader,
+    [activeTab, pseudo],
   );
 
   const { mutate: saveAccount, loading: savingAccount } = useMutation<Me>(
-    "/api/auth/me", "PATCH", authHeader, "Compte mis à jour !",
+    "/api/auth/me", "PATCH", undefined, "Compte mis à jour !",
   );
   const { mutate: savePlayer, loading: savingPlayer } = useMutation(
     pseudo ? `/api/players/${pseudo}` : "/api/players/__none",
-    "PATCH", authHeader,
+    "PATCH",
   );
 
   const saving = savingAccount || savingPlayer;
@@ -187,11 +180,11 @@ export default function ProfilePage() {
   // ── Moyens de réception ──
   const { data: payoutMethods, loading: payoutLoading, refetch: refetchPayouts } = useApi<PayoutMethod[]>(
     activeTab === 3 && pseudo ? `/api/players/${pseudo}/payout-methods` : null,
-    [activeTab, pseudo], authHeader,
+    [activeTab, pseudo],
   );
   const { mutate: addPayout, loading: addingPayout } = useMutation<PayoutMethod>(
     pseudo ? `/api/players/${pseudo}/payout-methods` : "/api/players/__none",
-    "POST", authHeader,
+    "POST",
   );
   const [payoutForm, setPayoutForm] = useState(emptyPayoutForm);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -220,7 +213,7 @@ export default function ProfilePage() {
   const handleDeletePayout = async (id: string) => {
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/payout-methods/${id}`, { method: "DELETE", headers: authHeader });
+      const res = await fetch(`/api/payout-methods/${id}`, { method: "DELETE" });
       if (res.ok) {
         toast.success("Moyen de réception supprimé.");
         refetchPayouts();
@@ -254,7 +247,7 @@ export default function ProfilePage() {
     toast.success("Modifications enregistrées !");
   };
 
-  if (!token || meLoading) {
+  if (meLoading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center text-[var(--text-muted)]">
         Chargement...

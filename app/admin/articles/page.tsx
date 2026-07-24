@@ -60,7 +60,7 @@ function MiniMarkdown({ content }: { content: string }) {
 }
 
 export default function AdminArticlesPage() {
-  const { token, me, authHeader, loading: authLoading } = useAuth();
+  const { me, loading: authLoading } = useAuth();
   const isStaff = me?.role === "ADMIN" || me?.role === "MODERATOR";
   const [editing, setEditing] = useState<string | null>(null); // slug en édition
   const [creating, setCreating] = useState(false);
@@ -70,15 +70,14 @@ export default function AdminArticlesPage() {
     loading,
     refetch,
   } = useApi<ArticleListItem[]>(
-    token && isStaff ? "/api/articles?status=all&limit=100" : null,
-    [token, isStaff],
-    authHeader,
+    isStaff ? "/api/articles?status=all&limit=100" : null,
+    [isStaff],
   );
 
   if (authLoading) {
     return <div className="min-h-[50vh] grid place-items-center text-[var(--text-muted)]">Chargement...</div>;
   }
-  if (!token || !isStaff) {
+  if (!isStaff) {
     return (
       <div className="min-h-[50vh] grid place-items-center text-[var(--text-muted)]">
         <div className="flex flex-col items-center gap-3">
@@ -116,10 +115,10 @@ export default function AdminArticlesPage() {
       </p>
 
       {creating && (
-        <ArticleEditor authorName={me?.username} authHeader={authHeader} onDone={done} onCancel={() => setCreating(false)} />
+        <ArticleEditor authorName={me?.username} onDone={done} onCancel={() => setCreating(false)} />
       )}
       {editing && (
-        <ArticleEditor slug={editing} authHeader={authHeader} onDone={done} onCancel={() => setEditing(null)} />
+        <ArticleEditor slug={editing} onDone={done} onCancel={() => setEditing(null)} />
       )}
 
       {!creating && !editing && (
@@ -130,7 +129,7 @@ export default function AdminArticlesPage() {
         ) : (
           <div className="flex flex-col gap-2.5">
             {articles.map((a) => (
-              <ArticleRow key={a.id} article={a} authHeader={authHeader} onChanged={refetch} onEdit={() => setEditing(a.slug)} />
+              <ArticleRow key={a.id} article={a} onChanged={refetch} onEdit={() => setEditing(a.slug)} />
             ))}
           </div>
         )

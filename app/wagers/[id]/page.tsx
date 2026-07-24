@@ -90,13 +90,13 @@ export default function WagerDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { token, me, player, authHeader } = useAuth();
+  const { me, player, isAuthenticated } = useAuth();
 
   const {
     data: wager,
     loading,
     refetch,
-  } = useApi<WagerDetail>(`/api/wagers/${id}`, [id, token], authHeader);
+  } = useApi<WagerDetail>(`/api/wagers/${id}`, [id]);
 
   const isStaff = me?.role === "ADMIN" || me?.role === "MODERATOR";
   const viewerId = player?.id;
@@ -234,7 +234,7 @@ export default function WagerDetailPage({
       )}
 
       {/* Zone d'actions */}
-      {!token ? (
+      {!isAuthenticated ? (
         <div className="text-center py-6 text-[var(--text-muted)] text-sm">
           <Link href="/auth/login" className="text-[var(--accent-green)] no-underline hover:underline">
             Connectez-vous
@@ -244,7 +244,6 @@ export default function WagerDetailPage({
       ) : (
         <ActionZone
           wager={wager}
-          authHeader={authHeader}
           isStaff={isStaff}
           isParticipant={isParticipant}
           isChallenger={isChallenger}

@@ -42,20 +42,21 @@ const SOCIALS: { key: string; label: string; placeholder: string }[] = [
 
 export default function ProfileEditPage() {
   const router = useRouter();
-  const { token, authHeader, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading } = useAuth();
 
   const { data: me, loading } = useApi<Me>(
-    token ? "/api/auth/me" : null,
-    [token],
-    authHeader,
+    "/api/auth/me",
+    [],
+    undefined,
+    { silent: true },
   );
 
   // Pas connecté → redirection vers la connexion
   useEffect(() => {
-    if (!authLoading && !token) router.push("/auth/login");
-  }, [authLoading, token, router]);
+    if (!authLoading && !isAuthenticated) router.push("/auth/login");
+  }, [authLoading, isAuthenticated, router]);
 
-  if (authLoading || !token || loading) {
+  if (authLoading || !isAuthenticated || loading) {
     return <div className="min-h-[50vh] grid place-items-center text-[var(--text-muted)]">Chargement...</div>;
   }
   if (!me) {
@@ -69,16 +70,14 @@ export default function ProfileEditPage() {
     );
   }
 
-  return <EditForm me={me} authHeader={authHeader} onDone={() => router.push("/profile")} />;
+  return <EditForm me={me} onDone={() => router.push("/profile")} />;
 }
 
 function EditForm({
   me,
-  authHeader,
   onDone,
 }: {
   me: Me;
-  authHeader?: Record<string, string>;
   onDone: () => void;
 }) {
   const player = me.player ?? null;
@@ -98,11 +97,10 @@ function EditForm({
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const saveAccount = useMutation<Me>("/api/auth/me", "PATCH", authHeader);
+  const saveAccount = useMutation<Me>("/api/auth/me", "PATCH");
   const savePlayer = useMutation(
     player ? `/api/players/${player.pseudo}` : "/api/players/__none",
     "PATCH",
-    authHeader,
   );
   const saving = saveAccount.loading || savePlayer.loading;
 
@@ -113,7 +111,7 @@ function EditForm({
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch("/api/upload/avatar", { method: "POST", headers: authHeader, body: fd });
+      const res = await fetch("/api/upload/avatar", { method: "POST", body: fd });
       const json = await res.json();
       if (!res.ok || json.error) {
         toast.error(json.error ?? "Échec de l'upload.");
