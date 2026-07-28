@@ -189,6 +189,19 @@ export default function ProfilePage() {
   const [payoutForm, setPayoutForm] = useState(emptyPayoutForm);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // ── Suppression de compte ──
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const { mutate: deleteAccount, loading: deletingAccount } = useMutation(
+    "/api/auth/me", "DELETE", undefined, "Compte supprimé.",
+  );
+
+  const handleDeleteAccount = async () => {
+    if (!deletePassword) { toast.error("Entrez votre mot de passe pour confirmer."); return; }
+    const r = await deleteAccount({ password: deletePassword });
+    if (r) router.push("/");
+  };
+
   const handleAddPayout = async () => {
     if (!payoutForm.label.trim()) { toast.error("Le libellé est requis."); return; }
     const details: Record<string, string> = {};
@@ -676,11 +689,50 @@ export default function ProfilePage() {
             <div className="mt-10 p-5 rounded-xl border border-[rgba(230,48,48,0.25)] bg-[rgba(230,48,48,0.04)]">
               <h4 className="text-sm font-bold text-[var(--accent-red)] mb-1">Zone dangereuse</h4>
               <p className="text-xs text-[var(--text-muted)] mb-4">
-                La suppression de votre compte est irréversible. Toutes vos données seront perdues.
+                La suppression de votre compte est irréversible. Votre email et votre pseudo seront libérés,
+                mais votre historique de tournois et de défis reste conservé pour l&apos;intégrité des classements.
+                Impossible si un défi est encore en cours (mise en séquestre ou litige non résolu).
               </p>
-              <button className="px-4 py-2 rounded-lg text-xs font-semibold border border-[rgba(230,48,48,0.4)] text-[var(--accent-red)] hover:bg-[rgba(230,48,48,0.08)] transition-colors cursor-pointer">
-                Supprimer mon compte
-              </button>
+
+              {!confirmingDelete ? (
+                <button
+                  onClick={() => setConfirmingDelete(true)}
+                  className="px-4 py-2 rounded-lg text-xs font-semibold border border-[rgba(230,48,48,0.4)] text-[var(--accent-red)] hover:bg-[rgba(230,48,48,0.08)] transition-colors cursor-pointer"
+                >
+                  Supprimer mon compte
+                </button>
+              ) : (
+                <div className="flex flex-col gap-3 max-w-xs">
+                  <label className="block text-xs font-medium text-[var(--text-secondary)]">
+                    Confirmez avec votre mot de passe
+                  </label>
+                  <input
+                    type="password"
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleDeleteAccount()}
+                    placeholder="Mot de passe"
+                    autoFocus
+                    className="w-full rounded-lg px-3.5 py-2.5 text-sm border border-[rgba(230,48,48,0.3)] outline-none bg-[var(--bg-primary)] text-[var(--text-primary)]"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleDeleteAccount}
+                      disabled={deletingAccount || !deletePassword}
+                      className="flex-1 px-4 py-2 rounded-lg text-xs font-semibold bg-[var(--accent-red)] text-white hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      {deletingAccount ? "Suppression..." : "Confirmer la suppression"}
+                    </button>
+                    <button
+                      onClick={() => { setConfirmingDelete(false); setDeletePassword(""); }}
+                      disabled={deletingAccount}
+                      className="px-4 py-2 rounded-lg text-xs font-medium border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

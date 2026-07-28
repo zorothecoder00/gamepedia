@@ -95,6 +95,30 @@ export async function hasActiveSuspension(playerId: string): Promise<boolean> {
   return suspension !== null;
 }
 
+/** Statuts qui clôturent définitivement un défi (aucun argent ni litige en suspens). */
+export const TERMINAL_WAGER_STATUSES: WagerStatus[] = [
+  WagerStatus.SETTLED,
+  WagerStatus.CANCELLED,
+  WagerStatus.EXPIRED,
+];
+
+/**
+ * Un joueur a-t-il au moins un défi encore actif (non terminal), comme
+ * challenger ou adversaire ? Sert de garde-fou avant suppression de compte :
+ * on ne veut pas qu'un joueur disparaisse en pleine mise sous séquestre
+ * ou en plein litige.
+ */
+export async function hasActiveWagers(playerId: string): Promise<boolean> {
+  const wager = await db.wager.findFirst({
+    where: {
+      OR: [{ challengerId: playerId }, { opponentId: playerId }],
+      status: { notIn: TERMINAL_WAGER_STATUSES },
+    },
+    select: { id: true },
+  });
+  return wager !== null;
+}
+
 /**
  * Vérifie qu'un joueur remplit les conditions pour parier :
  * actif, CGU paris acceptées, majeur, non suspendu, confiance suffisante.

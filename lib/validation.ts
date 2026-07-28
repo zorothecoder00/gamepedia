@@ -41,6 +41,18 @@ export const passwordConfirmSchema = z.object({
   password: z.string().min(8),
 });
 
+export const emailResendSchema = z.object({
+  email: z.string().email(),
+});
+
+export const emailVerifySchema = z.object({
+  token: z.string().min(1),
+});
+
+export const accountDeleteSchema = z.object({
+  password: z.string().min(1),
+});
+
 // ── Wagers ───────────────────────────────────────────────────
 
 const paymentMethodType = z.enum(["MOBILE_MONEY", "BANK_CARD", "WESTERN_UNION", "BANK_TRANSFER", "OTHER"]);

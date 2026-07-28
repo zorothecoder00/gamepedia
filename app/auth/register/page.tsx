@@ -18,7 +18,7 @@ export default function RegisterPage() {
 
   const handleRegister = async () => {
     const result = await mutate({ email: form.email, username: form.username, password: form.password });
-    if (result) router.push("/auth/verify-email");
+    if (result) router.push(`/auth/verify-email?email=${encodeURIComponent(form.email)}`);
   };
 
   return (

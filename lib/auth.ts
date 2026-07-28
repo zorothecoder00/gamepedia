@@ -30,14 +30,25 @@ export async function getUserIdFromRequest(
   return result?.userId ?? null;
 }
 
-/** Charge l'utilisateur authentifié avec son joueur lié, ou null. */
+/**
+ * Charge l'utilisateur authentifié avec son joueur lié, ou null.
+ *
+ * Point de révocation de session : un compte suspendu/supprimé
+ * (isActive = false) après l'émission du JWT redevient immédiatement
+ * non authentifié ici, sans attendre l'expiration du token (7j). Comme
+ * la quasi-totalité des routes protégées passent par cette fonction
+ * (et non par getUserIdFromRequest directement), la révocation est
+ * effective sur toute l'app dès la requête suivante.
+ */
 export async function getAuthUser(request: NextRequest) {
   const userId = await getUserIdFromRequest(request);
   if (!userId) return null;
-  return db.user.findUnique({
+  const user = await db.user.findUnique({
     where: { id: userId },
     include: { player: true },
   });
+  if (!user || !user.isActive) return null;
+  return user;
 }
 
 /** Vrai si le rôle est ADMIN ou MODERATOR. */

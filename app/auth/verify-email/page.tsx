@@ -1,14 +1,26 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useMutation } from "@/hooks/useMutation";
 
 export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={null}>
+      <VerifyEmailContent />
+    </Suspense>
+  );
+}
+
+function VerifyEmailContent() {
+  const searchParams = useSearchParams();
+  const email = searchParams.get("email") ?? "";
   const [resent, setResent] = useState(false);
   const { mutate, loading } = useMutation("/api/auth/email/resend");
 
   const handleResend = async () => {
-    await mutate();
+    if (!email) return;
+    await mutate({ email });
     setResent(true);
   };
 
@@ -18,7 +30,9 @@ export default function VerifyEmailPage() {
         <div className="text-[3.5rem] mb-4">✉️</div>
         <h1 className="text-2xl font-black text-[var(--text-primary)] mb-2">Vérifiez votre email</h1>
         <p className="text-[0.9rem] text-[var(--text-secondary)] leading-relaxed mb-6">
-          Un email de vérification a été envoyé à votre adresse. Cliquez sur le lien dans l&apos;email pour activer votre compte.
+          {email
+            ? <>Un email de vérification a été envoyé à <strong>{email}</strong>. Cliquez sur le lien dans l&apos;email pour activer votre compte.</>
+            : "Un email de vérification a été envoyé à votre adresse. Cliquez sur le lien dans l'email pour activer votre compte."}
         </p>
 
         <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-6 mb-6">
@@ -27,7 +41,7 @@ export default function VerifyEmailPage() {
           </div>
           {!resent && (
             <button
-              disabled={loading}
+              disabled={loading || !email}
               onClick={handleResend}
               className="px-6 py-2.5 rounded-lg border border-[var(--accent-green)] bg-transparent text-[var(--accent-green)] font-semibold text-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed hover:bg-[rgba(0,230,118,0.08)] transition-colors"
             >

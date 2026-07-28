@@ -13,8 +13,12 @@ Toutes les routes sont sous `/api/`. Le préfixe complet est `/api/[route]`.
 | `POST` | `/api/auth/logout` | Déconnexion — efface le cookie de session |
 | `GET` | `/api/auth/me` | Récupérer le profil de l'utilisateur connecté |
 | `PATCH` | `/api/auth/me` | Mettre à jour son profil |
+| `DELETE` | `/api/auth/me` | Clôturer son compte (mot de passe requis) — soft delete + anonymisation, refusé si des défis sont encore en cours |
 | `POST` | `/api/auth/password/reset` | Demander une réinitialisation de mot de passe |
 | `POST` | `/api/auth/password/confirm` | Confirmer le nouveau mot de passe |
+| `POST` | `/api/auth/email/resend` | Renvoyer l'email de vérification (message générique, anti-énumération) |
+| `POST` | `/api/auth/email/verify` | Consommer le token de vérification reçu par email |
+| `GET` | `/api/auth/session` | Usage interne — revérification live (isActive + rôle courant) appelée par `middleware.ts` pour les JWT « staff » |
 
 ---
 
