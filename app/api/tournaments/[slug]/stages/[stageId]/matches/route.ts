@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
-import { ok, created, notFound, serverError } from "@/lib/api";
+import { ok, created, notFound, unauthorized, forbidden, handleApiError, serverError } from "@/lib/api";
+import { getAuthUser, isStaff } from "@/lib/auth";
 
 type Params = { params: Promise<{ slug: string; stageId: string }> };
 
@@ -30,6 +31,10 @@ export async function GET(_request: NextRequest, { params }: Params) {
 
 export async function POST(request: NextRequest, { params }: Params) {
   try {
+    const actor = await getAuthUser(request);
+    if (!actor) return unauthorized();
+    if (!isStaff(actor.role)) return forbidden("Réservé à l'administration.");
+
     const { stageId } = await params;
     const stage = await db.tournamentStage.findUnique({ where: { id: stageId }, select: { id: true } });
     if (!stage) return notFound("Phase introuvable");
@@ -37,7 +42,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     const body = await request.json();
     const match = await db.match.create({ data: { ...body, stageId } });
     return created(match);
-  } catch {
-    return serverError();
+  } catch (e) {
+    return handleApiError(e);
   }
 }

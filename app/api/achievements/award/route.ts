@@ -1,9 +1,14 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
-import { created, badRequest, serverError } from "@/lib/api";
+import { created, badRequest, unauthorized, forbidden, handleApiError } from "@/lib/api";
+import { getAuthUser, isStaff } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
+    const actor = await getAuthUser(request);
+    if (!actor) return unauthorized();
+    if (!isStaff(actor.role)) return forbidden("Réservé à l'administration.");
+
     const { playerId, achievementId } = await request.json() as {
       playerId: string;
       achievementId: string;
@@ -19,7 +24,7 @@ export async function POST(request: NextRequest) {
     });
 
     return created(award);
-  } catch {
-    return serverError();
+  } catch (e) {
+    return handleApiError(e);
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
-import { ok, notFound, serverError } from "@/lib/api";
+import { ok, notFound, unauthorized, forbidden, handleApiError, serverError } from "@/lib/api";
+import { getAuthUser, isStaff } from "@/lib/auth";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -27,11 +28,15 @@ export async function GET(_request: NextRequest, { params }: Params) {
 
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
+    const actor = await getAuthUser(request);
+    if (!actor) return unauthorized();
+    if (!isStaff(actor.role)) return forbidden("Réservé à l'administration.");
+
     const { id } = await params;
     const body = await request.json();
     const match = await db.match.update({ where: { id }, data: body });
     return ok(match);
-  } catch {
-    return serverError();
+  } catch (e) {
+    return handleApiError(e);
   }
 }

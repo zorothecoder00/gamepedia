@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
-import { paginated, created, serverError, getPagination } from "@/lib/api";
+import { paginated, created, unauthorized, forbidden, handleApiError, serverError, getPagination } from "@/lib/api";
+import { getAuthUser, isStaff } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,6 +43,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const actor = await getAuthUser(request);
+    if (!actor) return unauthorized();
+    if (!isStaff(actor.role)) return forbidden("Réservé à l'administration.");
+
     const body = await request.json();
     const { pseudo, city, region, userId } = body as {
       pseudo: string;
@@ -55,7 +60,7 @@ export async function POST(request: NextRequest) {
     });
 
     return created(player);
-  } catch {
-    return serverError();
+  } catch (e) {
+    return handleApiError(e);
   }
 }
