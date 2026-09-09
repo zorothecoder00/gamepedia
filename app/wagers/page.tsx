@@ -167,11 +167,9 @@ export default function WagersPage() {
 
 function CreateWagerForm({
   games,
-  authHeader,
   onCreated,
 }: {
   games: { name: string; slug: string }[];
-  authHeader?: Record<string, string>;
   onCreated: () => void;
 }) {
   const [form, setForm] = useState({
@@ -189,11 +187,7 @@ function CreateWagerForm({
   );
   const gameList = gamesFull ?? games.map((g) => ({ id: "", ...g }));
 
-  const { mutate, loading } = useMutation(
-    "/api/wagers",
-    "POST",
-    authHeader,
-  );
+  const { mutate, loading } = useMutation("/api/wagers", "POST");
 
   const submit = async () => {
     if (!form.title.trim() || !form.gameId || !form.stakeAmount) {

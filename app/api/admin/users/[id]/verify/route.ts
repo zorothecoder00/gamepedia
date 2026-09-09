@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
-import { ok, notFound, unauthorized, forbidden, serverError } from "@/lib/api";
+import { ok, notFound, unauthorized, forbidden, handleApiError } from "@/lib/api";
 import { getAuthUser, isStaff } from "@/lib/auth";
 
 type Params = { params: Promise<{ id: string }> };
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     });
 
     return ok(player);
-  } catch {
-    return serverError();
+  } catch (e) {
+    return handleApiError(e);
   }
 }

@@ -17,13 +17,29 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
     const { role } = await parseBody(request, userRoleSchema);
 
-    const user = await db.user.findUnique({ where: { id }, select: { id: true } });
+    const user = await db.user.findUnique({ where: { id }, select: { id: true, role: true } });
     if (!user) return notFound("Utilisateur introuvable");
+
+    if (role === "ADMIN" && actor.role !== "ADMIN") {
+      return forbidden("Seul un administrateur peut accorder le rôle ADMIN.");
+    }
 
     const updated = await db.user.update({
       where: { id },
       data: { role },
       select: { id: true, username: true, role: true },
+    });
+
+    await db.auditLog.create({
+      data: {
+        actorId: actor.id,
+        actorName: actor.username,
+        action: "UPDATE",
+        entityType: "PLAYER",
+        entityId: id,
+        entityName: updated.username,
+        meta: { kind: "user_role_change", from: user.role, to: updated.role },
+      },
     });
 
     return ok(updated);

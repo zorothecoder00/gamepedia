@@ -120,11 +120,9 @@ export default function AdminTournamentsPage() {
 
 function TournamentRow({
   tournament,
-  authHeader,
   onChanged,
 }: {
   tournament: AdminTournament;
-  authHeader?: Record<string, string>;
   onChanged: () => void;
 }) {
   const st = STATUS_META[tournament.status] ?? STATUS_META.UPCOMING;
@@ -132,7 +130,7 @@ function TournamentRow({
   const setStatus = useMutation(
     `/api/tournaments/${tournament.slug}/status`,
     "PATCH",
-    authHeader,
+    undefined,
     "Statut mis à jour.",
   );
 

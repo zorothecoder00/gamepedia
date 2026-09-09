@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
-import { ok, unauthorized, forbidden, serverError } from "@/lib/api";
+import { ok, unauthorized, forbidden, handleApiError } from "@/lib/api";
 import { getAuthUser, isStaff } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       ongoingTournaments,
       recentPlayers,
     });
-  } catch {
-    return serverError();
+  } catch (e) {
+    return handleApiError(e);
   }
 }

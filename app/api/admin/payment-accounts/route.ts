@@ -5,16 +5,22 @@ import {
   created,
   unauthorized,
   forbidden,
+  tooManyRequests,
   handleApiError,
 } from "@/lib/api";
 import { getAuthUser, isStaff } from "@/lib/auth";
 import { parseBody, paymentAccountCreateSchema } from "@/lib/validation";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 // GET /api/admin/payment-accounts — comptes où déposer (visibles aux joueurs connectés)
 export async function GET(request: NextRequest) {
   try {
     const user = await getAuthUser(request);
     if (!user) return unauthorized();
+
+    if (!checkRateLimit(`payment-accounts-list:${user.id}`, 30, 60_000)) {
+      return tooManyRequests();
+    }
 
     const accounts = await db.platformPaymentAccount.findMany({
       where: { isActive: true },
@@ -32,6 +38,10 @@ export async function POST(request: NextRequest) {
     const user = await getAuthUser(request);
     if (!user) return unauthorized();
     if (!isStaff(user.role)) return forbidden("Réservé à l'administration.");
+
+    if (!checkRateLimit(`payment-accounts-create:${user.id}`, 30, 60_000)) {
+      return tooManyRequests();
+    }
 
     const { type, label, details, instructions } = await parseBody(request, paymentAccountCreateSchema);
 

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useApi } from "@/hooks/useApi";
 
 const navLinks = [
   { href: "/games", label: "Jeux" },
@@ -72,6 +73,7 @@ export default function Navbar() {
         <div className="flex items-center gap-2">
           {isAuthenticated ? (
             <>
+              <NotificationBell />
               <Link
                 href="/profile"
                 className="hidden md:inline-flex px-3.5 py-1.5 rounded-md text-sm font-medium text-[var(--text-secondary)] no-underline border border-[var(--border)] hover:text-[var(--text-primary)] transition-colors"
@@ -176,5 +178,34 @@ export default function Navbar() {
         </div>
       )}
     </nav>
+  );
+}
+
+function NotificationBell() {
+  const router = useRouter();
+  const { data } = useApi<{ count: number }>(
+    "/api/notifications/unread-count",
+    [],
+    undefined,
+    { silent: true },
+  );
+  const count = data?.count ?? 0;
+
+  return (
+    <button
+      onClick={() => router.push("/notifications")}
+      className="hidden md:inline-flex relative bg-transparent border-none cursor-pointer text-[var(--text-secondary)] hover:text-[var(--text-primary)] p-1.5 transition-colors"
+      aria-label="Notifications"
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+      </svg>
+      {count > 0 && (
+        <span className="absolute top-0 right-0 min-w-[16px] h-4 px-1 rounded-full bg-[var(--accent-red)] text-white text-[0.6rem] font-bold flex items-center justify-center">
+          {count > 9 ? "9+" : count}
+        </span>
+      )}
+    </button>
   );
 }

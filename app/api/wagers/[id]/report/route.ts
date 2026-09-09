@@ -16,13 +16,13 @@ import {
   markWagerPlayed,
   markWagerWon,
   notifyPlayer,
+  canTransition,
+  WagerError,
 } from "@/lib/wagers";
 import { parseBody, wagerReportSchema } from "@/lib/validation";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 type Params = { params: Promise<{ id: string }> };
-
-const REPORTABLE = ["ONGOING", "AWAITING_RESULT", "RESULT_REPORTED"];
 
 // POST /api/wagers/[id]/report — déclarer le résultat du match
 export async function POST(request: NextRequest, { params }: Params) {
@@ -42,8 +42,15 @@ export async function POST(request: NextRequest, { params }: Params) {
     });
     if (!wager) return notFound("Défi introuvable");
     if (!isParticipant(wager, playerId)) return forbidden();
-    if (!REPORTABLE.includes(wager.status)) {
-      return forbidden("Le résultat ne peut pas être déclaré à ce stade.");
+    // RESULT_REPORTED est un cas particulier : un joueur peut modifier sa
+    // propre déclaration tant que l'adversaire n'a pas encore déclaré la
+    // sienne (pas de changement de statut dans ce cas, donc hors de la
+    // machine à états WAGER_TRANSITIONS qui ne modélise que les vraies
+    // transitions de statut).
+    const canReport =
+      wager.status === "RESULT_REPORTED" || canTransition(wager.status, "RESULT_REPORTED");
+    if (!canReport) {
+      throw new WagerError("Le résultat ne peut pas être déclaré à ce stade.", 409);
     }
 
     const { claimedWinnerId, proofUrl, note } = await parseBody(request, wagerReportSchema);

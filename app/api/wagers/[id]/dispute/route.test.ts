@@ -89,7 +89,7 @@ describe("POST /api/wagers/[id]/dispute", () => {
       makeRequest("http://localhost/api/wagers/w1/dispute", { reason: "Litige" }),
       withParams("w1"),
     );
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(409);
     expect(dbMock.wagerDispute.upsert).not.toHaveBeenCalled();
   });
 

@@ -106,11 +106,9 @@ export default function AdminDisputesPage() {
 
 function DisputeCard({
   dispute,
-  authHeader,
   onResolved,
 }: {
   dispute: Dispute;
-  authHeader?: Record<string, string>;
   onResolved: () => void;
 }) {
   const { wager } = dispute;
@@ -119,7 +117,7 @@ function DisputeCard({
   const resolve = useMutation(
     `/api/admin/disputes/${dispute.id}/resolve`,
     "POST",
-    authHeader,
+    undefined,
     "Litige tranché.",
   );
 

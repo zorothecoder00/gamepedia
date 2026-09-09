@@ -139,12 +139,10 @@ export default function AdminPointRulesPage() {
 function TierTable({
   tier,
   rules,
-  authHeader,
   onChanged,
 }: {
   tier: Tier;
   rules: PointRule[];
-  authHeader?: Record<string, string>;
   onChanged: () => void;
 }) {
   return (
@@ -162,7 +160,7 @@ function TierTable({
             <span></span>
           </div>
           {rules.map((r) => (
-            <RuleRow key={r.id} rule={r} authHeader={authHeader} onChanged={onChanged} />
+            <RuleRow key={r.id} rule={r} onChanged={onChanged} />
           ))}
         </div>
       )}
@@ -172,17 +170,15 @@ function TierTable({
 
 function RuleRow({
   rule,
-  authHeader,
   onChanged,
 }: {
   rule: PointRule;
-  authHeader?: Record<string, string>;
   onChanged: () => void;
 }) {
   const [points, setPoints] = useState(String(rule.pointsAwarded));
   const [mult, setMult] = useState(String(rule.formatMultiplier));
-  const patch = useMutation(`/api/point-rules/${rule.id}`, "PATCH", authHeader, "Règle mise à jour.");
-  const del = useMutation(`/api/point-rules/${rule.id}`, "DELETE", authHeader);
+  const patch = useMutation(`/api/point-rules/${rule.id}`, "PATCH", undefined, "Règle mise à jour.");
+  const del = useMutation(`/api/point-rules/${rule.id}`, "DELETE");
 
   const dirty = points !== String(rule.pointsAwarded) || mult !== String(rule.formatMultiplier);
   const final = finalPoints({ pointsAwarded: Number(points) || 0, formatMultiplier: Number(mult) || 0 });
@@ -235,11 +231,9 @@ function RuleRow({
 
 function AddRuleForm({
   gameId,
-  authHeader,
   onAdded,
 }: {
   gameId: string;
-  authHeader?: Record<string, string>;
   onAdded: () => void;
 }) {
   const [tier, setTier] = useState<Tier>("A");
@@ -247,7 +241,7 @@ function AddRuleForm({
   const [points, setPoints] = useState("100");
   const [mult, setMult] = useState("1");
   const [description, setDescription] = useState("");
-  const create = useMutation("/api/point-rules", "POST", authHeader, "Règle ajoutée.");
+  const create = useMutation("/api/point-rules", "POST", undefined, "Règle ajoutée.");
 
   const submit = async () => {
     const pl = Number(placement);

@@ -8,6 +8,7 @@ import TierBadge from "@/app/components/TierBadge";
 import GameTag from "@/app/components/GameTag";
 import { useApi } from "@/hooks/useApi";
 import { useMutation } from "@/hooks/useMutation";
+import { useAuth } from "@/hooks/useAuth";
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS, type PaymentMethodType } from "@/app/wagers/wager-ui";
 
 // ─── Types ────────────────────────────────────────────────────
@@ -153,7 +154,12 @@ export default function ProfilePage() {
     youtube:  playerData.socialLinks?.youtube ?? "",
   });
 
-  const { data: me, loading: meLoading } = useApi<Me>("/api/auth/me", [], undefined, { silent: true });
+  // /api/auth/me renvoie plus de champs (createdAt, détails complets du
+  // player) que le type AuthMe/AuthPlayer partagé de useAuth() (pensé pour
+  // la Navbar). On passe par le hook partagé pour éviter de dupliquer le
+  // fetch + la logique de redirection, en élargissant le typage localement.
+  const { me: authMe, loading: meLoading } = useAuth();
+  const me = authMe as unknown as Me | null;
 
   useEffect(() => {
     if (!meLoading && !me) router.push("/auth/login");

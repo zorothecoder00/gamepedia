@@ -109,3 +109,17 @@ export const userRoleSchema = z.object({
 export const userActiveSchema = z.object({
   isActive: z.boolean(),
 });
+
+export const wagerStatusQuerySchema = z.enum([
+  "OPEN",
+  "ACCEPTED",
+  "AWAITING_DEPOSITS",
+  "ONGOING",
+  "AWAITING_RESULT",
+  "RESULT_REPORTED",
+  "DISPUTED",
+  "AWAITING_PAYOUT",
+  "SETTLED",
+  "CANCELLED",
+  "EXPIRED",
+]);

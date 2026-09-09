@@ -80,15 +80,13 @@ export default function AdminPlayersPage() {
 
 function PlayerRow({
   player,
-  authHeader,
   onChanged,
 }: {
   player: AdminPlayer;
-  authHeader?: Record<string, string>;
   onChanged: () => void;
 }) {
-  const patch = useMutation(`/api/players/${player.pseudo}`, "PATCH", authHeader);
-  const del = useMutation(`/api/players/${player.pseudo}`, "DELETE", authHeader);
+  const patch = useMutation(`/api/players/${player.pseudo}`, "PATCH");
+  const del = useMutation(`/api/players/${player.pseudo}`, "DELETE");
   const busy = patch.loading || del.loading;
   const team = player.teamMemberships[0]?.team;
   const games = player.gameProfiles.map((g) => g.game.name).join(", ");

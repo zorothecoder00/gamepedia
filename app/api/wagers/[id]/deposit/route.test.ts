@@ -74,7 +74,7 @@ describe("POST /api/wagers/[id]/deposit", () => {
     (getAuthUser as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "u1", player: { id: "challenger-1" } });
     dbMock.wager.findUnique.mockResolvedValue({ ...awaitingDepositsWager, status: "ONGOING" });
     const res = await POST(makeRequest("http://localhost/api/wagers/w1/deposit", validBody), withParams("w1"));
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(409);
     expect(dbMock.wagerDeposit.upsert).not.toHaveBeenCalled();
   });
 

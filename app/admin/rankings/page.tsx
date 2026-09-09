@@ -157,20 +157,18 @@ export default function AdminRankingsPage() {
 
 function SeasonCard({
   season,
-  authHeader,
   onChanged,
 }: {
   season: Season;
-  authHeader?: Record<string, string>;
   onChanged: () => void;
 }) {
   const st = seasonStatus(season);
-  const activate = useMutation(`/api/seasons/${season.id}/activate`, "POST", authHeader, "Saison activée.");
-  const close = useMutation(`/api/seasons/${season.id}/close`, "POST", authHeader, "Saison clôturée.");
+  const activate = useMutation(`/api/seasons/${season.id}/activate`, "POST", undefined, "Saison activée.");
+  const close = useMutation(`/api/seasons/${season.id}/close`, "POST", undefined, "Saison clôturée.");
   const recalc = useMutation(
     `/api/rankings/${season.game.slug}/${season.id}/recalculate`,
     "POST",
-    authHeader,
+    undefined,
     "Recalcul de la saison déclenché.",
   );
   const busy = activate.loading || close.loading || recalc.loading;
@@ -234,11 +232,9 @@ function SeasonCard({
 
 function CreateSeasonForm({
   games,
-  authHeader,
   onCreated,
 }: {
   games: Game[];
-  authHeader?: Record<string, string>;
   onCreated: () => void;
 }) {
   const [gameId, setGameId] = useState("");
@@ -246,7 +242,7 @@ function CreateSeasonForm({
   const [year, setYear] = useState(new Date().getFullYear());
   const [quarter, setQuarter] = useState("");
   const [startDate, setStartDate] = useState("");
-  const create = useMutation("/api/seasons", "POST", authHeader, "Saison créée.");
+  const create = useMutation("/api/seasons", "POST", undefined, "Saison créée.");
 
   const submit = async () => {
     if (!gameId) return toast.error("Choisissez un jeu.");

@@ -9,7 +9,7 @@ import {
   handleApiError,
 } from "@/lib/api";
 import { getAuthUser } from "@/lib/auth";
-import { isParticipant } from "@/lib/wagers";
+import { isParticipant, WagerError } from "@/lib/wagers";
 import { parseBody, wagerDepositSchema } from "@/lib/validation";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -30,8 +30,10 @@ export async function POST(request: NextRequest, { params }: Params) {
     const wager = await db.wager.findUnique({ where: { id } });
     if (!wager) return notFound("Défi introuvable");
     if (!isParticipant(wager, playerId)) return forbidden();
+    // Les dépôts ne modifient pas wager.status (ce n'est pas une transition
+    // de la machine à états) — c'est une simple garde d'état courant.
     if (wager.status !== "AWAITING_DEPOSITS") {
-      return forbidden("Les dépôts ne sont pas ouverts pour ce défi.");
+      throw new WagerError("Les dépôts ne sont pas ouverts pour ce défi.", 409);
     }
 
     const { methodType, proofUrl, reference } = await parseBody(request, wagerDepositSchema);

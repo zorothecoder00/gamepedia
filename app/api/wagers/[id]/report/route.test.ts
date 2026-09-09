@@ -83,7 +83,7 @@ describe("POST /api/wagers/[id]/report", () => {
       makeRequest("http://localhost/api/wagers/w1/report", { claimedWinnerId: "challenger-1" }),
       withParams("w1"),
     );
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(409);
   });
 
   it("rejette un claimedWinnerId hors des deux participants", async () => {

@@ -182,6 +182,7 @@ model User {
   notifications           Notification[]
   suspensionsGiven        Suspension[]             @relation("SuspendedBy")
   emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens     PasswordResetToken[]
 
   @@map("users")
 }
@@ -197,6 +198,19 @@ model EmailVerificationToken {
   createdAt DateTime @default(now())
 
   @@map("email_verification_tokens")
+}
+
+/// Token à usage unique pour réinitialiser un mot de passe (envoyé par lien).
+/// Seul le hash est stocké ; le token brut ne transite que dans l'email.
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("password_reset_tokens")
 }
 
 // ============================================================

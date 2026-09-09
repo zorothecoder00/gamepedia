@@ -86,14 +86,12 @@ export default function AdminGamesPage() {
 
 function GameRow({
   game,
-  authHeader,
   onChanged,
 }: {
   game: AdminGame;
-  authHeader?: Record<string, string>;
   onChanged: () => void;
 }) {
-  const patch = useMutation(`/api/games/${game.slug}`, "PATCH", authHeader);
+  const patch = useMutation(`/api/games/${game.slug}`, "PATCH");
 
   const toggle = async () => {
     const r = await patch.mutate({ isActive: !game.isActive });
@@ -141,12 +139,12 @@ function GameRow({
   );
 }
 
-function AddGameForm({ authHeader, onAdded }: { authHeader?: Record<string, string>; onAdded: () => void }) {
+function AddGameForm({ onAdded }: { onAdded: () => void }) {
   const [name, setName] = useState("");
   const [genre, setGenre] = useState("");
   const [format, setFormat] = useState("FIVE_VS_FIVE");
   const [platforms, setPlatforms] = useState("");
-  const create = useMutation("/api/games", "POST", authHeader, "Jeu ajouté.");
+  const create = useMutation("/api/games", "POST", undefined, "Jeu ajouté.");
 
   const submit = async () => {
     if (!name.trim()) return toast.error("Le nom est requis.");

@@ -94,17 +94,15 @@ function UserRow({
   user,
   isSelf,
   canManageRoles,
-  authHeader,
   onChanged,
 }: {
   user: AdminUser;
   isSelf: boolean;
   canManageRoles: boolean;
-  authHeader?: Record<string, string>;
   onChanged: () => void;
 }) {
-  const roleMut = useMutation(`/api/admin/users/${user.id}/role`, "PATCH", authHeader, "Rôle mis à jour.");
-  const activeMut = useMutation(`/api/admin/users/${user.id}`, "PATCH", authHeader);
+  const roleMut = useMutation(`/api/admin/users/${user.id}/role`, "PATCH", undefined, "Rôle mis à jour.");
+  const activeMut = useMutation(`/api/admin/users/${user.id}`, "PATCH");
   const busy = roleMut.loading || activeMut.loading;
 
   const changeRole = async (role: string) => {

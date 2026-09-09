@@ -199,11 +199,9 @@ function EmptyState({ message, hint }: { message: string; hint?: string }) {
 
 function MatchEditor({
   match,
-  authHeader,
   onSaved,
 }: {
   match: Match;
-  authHeader?: Record<string, string>;
   onSaved: () => void;
 }) {
   const [p1, p2] = match.participants;
@@ -220,7 +218,7 @@ function MatchEditor({
   const save = useMutation(
     `/api/matches/${match.id}/result`,
     "POST",
-    authHeader,
+    undefined,
     "Résultat enregistré.",
   );
 

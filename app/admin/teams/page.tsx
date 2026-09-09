@@ -84,11 +84,9 @@ export default function AdminTeamsPage() {
 
 function TeamRow({
   team,
-  authHeader,
   onChanged,
 }: {
   team: AdminTeam;
-  authHeader?: Record<string, string>;
   onChanged: () => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -97,7 +95,7 @@ function TeamRow({
   const [city, setCity] = useState(team.city ?? "");
   const [region, setRegion] = useState(team.region ?? "");
 
-  const patch = useMutation(`/api/teams/${team.slug}`, "PATCH", authHeader);
+  const patch = useMutation(`/api/teams/${team.slug}`, "PATCH");
   const busy = patch.loading;
 
   const roster = team.members.map((m) => m.player.pseudo).join(", ");

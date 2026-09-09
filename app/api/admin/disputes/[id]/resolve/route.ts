@@ -6,6 +6,7 @@ import {
   notFound,
   unauthorized,
   forbidden,
+  tooManyRequests,
   handleApiError,
 } from "@/lib/api";
 import { getAuthUser, isStaff } from "@/lib/auth";
@@ -16,6 +17,7 @@ import {
   notifyPlayer,
 } from "@/lib/wagers";
 import { parseBody, disputeResolveSchema } from "@/lib/validation";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -26,6 +28,10 @@ export async function POST(request: NextRequest, { params }: Params) {
     const user = await getAuthUser(request);
     if (!user) return unauthorized();
     if (!isStaff(user.role)) return forbidden("Réservé à l'administration.");
+
+    if (!checkRateLimit(`dispute-resolve:${user.id}`, 30, 60_000)) {
+      return tooManyRequests();
+    }
 
     const { resolvedWinnerId, resolution } = await parseBody(request, disputeResolveSchema);
 

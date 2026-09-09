@@ -1,8 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import TierBadge from "../../components/TierBadge";
 import { useApi } from "@/hooks/useApi";
+
+const BRACKET_REFRESH_MS = 25_000;
 
 interface Participant {
   id: string; finalPlacement?: number; prizeWon?: number; seed?: number;
@@ -83,9 +85,18 @@ export default function TournamentPage({ params }: { params: { slug: string } })
   const { slug } = params;
 
   const { data: tournament, loading } = useApi<Tournament>(`/api/tournaments/${slug}`);
-  const { data: bracket, loading: loadingBracket } = useApi<Stage[]>(
+  const { data: bracket, loading: loadingBracket, refetch: refetchBracket } = useApi<Stage[]>(
     activeTab === 2 ? `/api/tournaments/${slug}/bracket` : null, [activeTab],
   );
+
+  // Rafraîchit le bracket automatiquement quand son onglet est actif et
+  // que le tournoi est en cours (pas de websocket/SSE dans le projet, un
+  // simple polling suffit pour ce cas d'usage).
+  useEffect(() => {
+    if (activeTab !== 2 || tournament?.status !== "ONGOING") return;
+    const interval = setInterval(refetchBracket, BRACKET_REFRESH_MS);
+    return () => clearInterval(interval);
+  }, [activeTab, tournament?.status, refetchBracket]);
 
   if (loading) {
     return <div className="max-w-[1280px] mx-auto my-16 text-center text-[var(--text-muted)]">Chargement...</div>;

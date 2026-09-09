@@ -3,6 +3,7 @@ import { db } from "@/lib/prisma";
 import {
   paginated,
   created,
+  badRequest,
   unauthorized,
   forbidden,
   getPagination,
@@ -17,17 +18,27 @@ import {
   hasGameProfile,
   DEFAULT_COMMISSION_RATE,
 } from "@/lib/wagers";
-import { parseBody, wagerCreateSchema } from "@/lib/validation";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { parseBody, wagerCreateSchema, wagerStatusQuerySchema } from "@/lib/validation";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 // GET /api/wagers — lobby des défis (filtres : game, status, mine)
 export async function GET(request: NextRequest) {
   try {
+    if (!checkRateLimit(`wagers-list:${getClientIp(request)}`, 60, 60_000)) {
+      return tooManyRequests();
+    }
+
     const sp = request.nextUrl.searchParams;
     const { page, limit, skip } = getPagination(sp);
     const game = sp.get("game") ?? undefined; // slug
-    const status = sp.get("status") ?? undefined;
+    const rawStatus = sp.get("status") ?? undefined;
     const mine = sp.get("mine") === "true";
+
+    const statusResult = rawStatus ? wagerStatusQuerySchema.safeParse(rawStatus) : undefined;
+    if (rawStatus && !statusResult?.success) {
+      return badRequest("status invalide");
+    }
+    const status = statusResult?.data;
 
     let playerId: string | undefined;
     if (mine) {
@@ -37,7 +48,7 @@ export async function GET(request: NextRequest) {
     }
 
     const where = {
-      ...(status && { status: status as never }),
+      ...(status && { status }),
       ...(game && { game: { slug: game } }),
       ...(playerId
         ? { OR: [{ challengerId: playerId }, { opponentId: playerId }] }

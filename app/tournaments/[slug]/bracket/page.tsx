@@ -1,6 +1,9 @@
 "use client";
 import Link from "next/link";
+import { useEffect } from "react";
 import { useApi } from "@/hooks/useApi";
+
+const BRACKET_REFRESH_MS = 25_000;
 
 interface MatchParticipant {
   id: string;
@@ -55,9 +58,18 @@ function Slot({ p }: { p?: MatchParticipant }) {
 export default function BracketFullscreenPage({ params }: { params: { slug: string } }) {
   const { slug } = params;
   const { data: tournament } = useApi<Tournament>(`/api/tournaments/${slug}`);
-  const { data: stages, loading } = useApi<Stage[]>(`/api/tournaments/${slug}/bracket`);
+  const { data: stages, loading, refetch } = useApi<Stage[]>(`/api/tournaments/${slug}/bracket`);
 
   const st = tournament ? STATUS_META[tournament.status] ?? STATUS_META.UPCOMING : null;
+
+  // Rafraîchit le bracket automatiquement pendant que le tournoi est en
+  // cours (pas de websocket/SSE dans le projet, un simple polling suffit
+  // pour ce cas d'usage).
+  useEffect(() => {
+    if (tournament?.status !== "ONGOING") return;
+    const interval = setInterval(refetch, BRACKET_REFRESH_MS);
+    return () => clearInterval(interval);
+  }, [tournament?.status, refetch]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--bg-primary)]">

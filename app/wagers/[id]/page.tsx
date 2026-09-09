@@ -315,7 +315,6 @@ function Stat({
 
 function ActionZone({
   wager,
-  authHeader,
   isStaff,
   isParticipant,
   isChallenger,
@@ -324,7 +323,6 @@ function ActionZone({
   onDone,
 }: {
   wager: WagerDetail;
-  authHeader?: Record<string, string>;
   isStaff: boolean;
   isParticipant: boolean;
   isChallenger: boolean;
@@ -333,9 +331,9 @@ function ActionZone({
   onDone: () => void;
 }) {
   const id = wager.id;
-  const accept = useMutation(`/api/wagers/${id}/accept`, "POST", authHeader, "Défi accepté !");
-  const agree = useMutation(`/api/wagers/${id}/agree`, "POST", authHeader, "Termes validés !");
-  const cancel = useMutation(`/api/wagers/${id}/cancel`, "POST", authHeader, "Défi annulé.");
+  const accept = useMutation(`/api/wagers/${id}/accept`, "POST", undefined, "Défi accepté !");
+  const agree = useMutation(`/api/wagers/${id}/agree`, "POST", undefined, "Termes validés !");
+  const cancel = useMutation(`/api/wagers/${id}/cancel`, "POST", undefined, "Défi annulé.");
 
   const run = async (m: { mutate: (b?: unknown) => Promise<unknown> }, body?: unknown) => {
     const r = await m.mutate(body);
@@ -388,7 +386,6 @@ function ActionZone({
       {status === "AWAITING_DEPOSITS" && isParticipant && (
         <DepositSection
           wager={wager}
-          authHeader={authHeader}
           myDeposit={myDeposit}
           onDone={onDone}
         />
@@ -401,7 +398,6 @@ function ActionZone({
           <DepositTracker
             wager={wager}
             isStaff={isStaff}
-            authHeader={authHeader}
             onDone={onDone}
           />
         )}
@@ -409,12 +405,12 @@ function ActionZone({
       {/* ONGOING/AWAITING_RESULT/RESULT_REPORTED — déclarer le résultat */}
       {["ONGOING", "AWAITING_RESULT", "RESULT_REPORTED"].includes(status) &&
         isParticipant && (
-          <ReportSection wager={wager} authHeader={authHeader} viewerId={viewerId} onDone={onDone} />
+          <ReportSection wager={wager} viewerId={viewerId} onDone={onDone} />
         )}
 
       {/* AWAITING_PAYOUT — staff verse */}
       {status === "AWAITING_PAYOUT" && isStaff && (
-        <PayoutSection wager={wager} authHeader={authHeader} onDone={onDone} />
+        <PayoutSection wager={wager} onDone={onDone} />
       )}
 
       {status === "DISPUTED" && isStaff && (
@@ -435,7 +431,7 @@ function ActionZone({
       ) &&
         isParticipant &&
         !wager.dispute && (
-          <DisputeSection wager={wager} authHeader={authHeader} onDone={onDone} />
+          <DisputeSection wager={wager} onDone={onDone} />
         )}
 
       {/* Annulation (avant la phase de jeu) */}
@@ -457,27 +453,21 @@ function ActionZone({
 
 function DepositSection({
   wager,
-  authHeader,
   myDeposit,
   onDone,
 }: {
   wager: WagerDetail;
-  authHeader?: Record<string, string>;
   myDeposit?: Deposit;
   onDone: () => void;
 }) {
-  const { data: accounts } = useApi<PaymentAccount[]>(
-    "/api/admin/payment-accounts",
-    [],
-    authHeader,
-  );
+  const { data: accounts } = useApi<PaymentAccount[]>("/api/admin/payment-accounts", []);
   const [methodType, setMethodType] = useState<PaymentMethodType>("MOBILE_MONEY");
   const [reference, setReference] = useState("");
   const [proofUrl, setProofUrl] = useState("");
   const deposit = useMutation(
     `/api/wagers/${wager.id}/deposit`,
     "POST",
-    authHeader,
+    undefined,
     "Dépôt déclaré ! En attente de validation admin.",
   );
 
@@ -586,18 +576,16 @@ function DepositSection({
 function DepositTracker({
   wager,
   isStaff,
-  authHeader,
   onDone,
 }: {
   wager: WagerDetail;
   isStaff: boolean;
-  authHeader?: Record<string, string>;
   onDone: () => void;
 }) {
   const confirm = useMutation(
     `/api/wagers/${wager.id}/deposit/confirm`,
     "POST",
-    authHeader,
+    undefined,
     "Dépôt confirmé.",
   );
 
@@ -657,12 +645,10 @@ function DepositTracker({
 
 function ReportSection({
   wager,
-  authHeader,
   viewerId,
   onDone,
 }: {
   wager: WagerDetail;
-  authHeader?: Record<string, string>;
   viewerId?: string;
   onDone: () => void;
 }) {
@@ -675,7 +661,7 @@ function ReportSection({
   const report = useMutation(
     `/api/wagers/${wager.id}/report`,
     "POST",
-    authHeader,
+    undefined,
     "Résultat déclaré !",
   );
 
@@ -757,11 +743,9 @@ function nameOfWinner(wager: WagerDetail, pid: string) {
 
 function DisputeSection({
   wager,
-  authHeader,
   onDone,
 }: {
   wager: WagerDetail;
-  authHeader?: Record<string, string>;
   onDone: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -769,7 +753,7 @@ function DisputeSection({
   const dispute = useMutation(
     `/api/wagers/${wager.id}/dispute`,
     "POST",
-    authHeader,
+    undefined,
     "Litige ouvert. L'administration va trancher.",
   );
 
@@ -822,11 +806,9 @@ function DisputeSection({
 
 function PayoutSection({
   wager,
-  authHeader,
   onDone,
 }: {
   wager: WagerDetail;
-  authHeader?: Record<string, string>;
   onDone: () => void;
 }) {
   const [methodType, setMethodType] = useState<PaymentMethodType>("MOBILE_MONEY");
@@ -835,7 +817,7 @@ function PayoutSection({
   const payout = useMutation(
     `/api/wagers/${wager.id}/payout`,
     "POST",
-    authHeader,
+    undefined,
     "Versement enregistré.",
   );
   const preview = payoutPreview(wager.stakeAmount, wager.commissionRate);

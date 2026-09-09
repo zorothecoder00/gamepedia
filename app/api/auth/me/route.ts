@@ -1,11 +1,12 @@
 import crypto from "node:crypto";
 import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
-import { ok, unauthorized, forbidden, serverError, handleApiError } from "@/lib/api";
+import { ok, unauthorized, forbidden, tooManyRequests, handleApiError } from "@/lib/api";
 import { getAuthUser, hashPassword, verifyPassword } from "@/lib/auth";
 import { AUTH_COOKIE } from "@/lib/auth-edge";
 import { parseBody, mePatchSchema, accountDeleteSchema } from "@/lib/validation";
 import { hasActiveWagers } from "@/lib/wagers";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,8 +20,8 @@ export async function GET(request: NextRequest) {
 
     if (!user) return unauthorized();
     return ok(user);
-  } catch {
-    return serverError();
+  } catch (e) {
+    return handleApiError(e);
   }
 }
 
@@ -28,6 +29,10 @@ export async function PATCH(request: NextRequest) {
   try {
     const authed = await getAuthUser(request);
     if (!authed) return unauthorized();
+
+    if (!checkRateLimit(`me-patch:${authed.id}`, 10, 60_000)) {
+      return tooManyRequests();
+    }
 
     const { username, email } = await parseBody(request, mePatchSchema);
 
@@ -53,6 +58,10 @@ export async function DELETE(request: NextRequest) {
   try {
     const user = await getAuthUser(request);
     if (!user) return unauthorized();
+
+    if (!checkRateLimit(`me-delete:${user.id}`, 10, 60_000)) {
+      return tooManyRequests();
+    }
 
     const { password } = await parseBody(request, accountDeleteSchema);
     const valid = await verifyPassword(password, user.passwordHash);

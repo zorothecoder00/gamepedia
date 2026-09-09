@@ -140,17 +140,15 @@ export default function AdminArticlesPage() {
 
 function ArticleRow({
   article,
-  authHeader,
   onChanged,
   onEdit,
 }: {
   article: ArticleListItem;
-  authHeader?: Record<string, string>;
   onChanged: () => void;
   onEdit: () => void;
 }) {
-  const publish = useMutation(`/api/articles/${article.slug}/publish`, "POST", authHeader);
-  const del = useMutation(`/api/articles/${article.slug}`, "DELETE", authHeader);
+  const publish = useMutation(`/api/articles/${article.slug}/publish`, "POST");
+  const del = useMutation(`/api/articles/${article.slug}`, "DELETE");
   const busy = publish.loading || del.loading;
 
   const togglePublish = async () => {
@@ -223,20 +221,17 @@ function ArticleRow({
 function ArticleEditor({
   slug,
   authorName,
-  authHeader,
   onDone,
   onCancel,
 }: {
   slug?: string;
   authorName?: string;
-  authHeader?: Record<string, string>;
   onDone: () => void;
   onCancel: () => void;
 }) {
   const { data: existing, loading } = useApi<ArticleFull>(
     slug ? `/api/articles/${slug}` : null,
     [slug],
-    authHeader,
   );
 
   if (slug && loading) {
@@ -248,7 +243,6 @@ function ArticleEditor({
       slug={slug}
       initial={existing ?? undefined}
       authorName={authorName}
-      authHeader={authHeader}
       onDone={onDone}
       onCancel={onCancel}
     />
@@ -259,14 +253,12 @@ function EditorForm({
   slug,
   initial,
   authorName,
-  authHeader,
   onDone,
   onCancel,
 }: {
   slug?: string;
   initial?: ArticleFull;
   authorName?: string;
-  authHeader?: Record<string, string>;
   onDone: () => void;
   onCancel: () => void;
 }) {
@@ -280,7 +272,7 @@ function EditorForm({
   const save = useMutation(
     isEdit ? `/api/articles/${slug}` : "/api/articles",
     isEdit ? "PATCH" : "POST",
-    authHeader,
+    undefined,
     isEdit ? "Article mis à jour." : "Brouillon créé.",
   );
 
