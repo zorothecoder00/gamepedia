@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
 import { ok, created, notFound, unauthorized, forbidden, handleApiError, serverError } from "@/lib/api";
 import { getAuthUser, isStaff } from "@/lib/auth";
+import { parseBody, playerMatchPerformanceCreateSchema } from "@/lib/validation";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -32,9 +33,9 @@ export async function POST(request: NextRequest, { params }: Params) {
     const match = await db.match.findUnique({ where: { id }, select: { id: true } });
     if (!match) return notFound("Match introuvable");
 
-    const body = await request.json();
+    const body = await parseBody(request, playerMatchPerformanceCreateSchema);
     const performance = await db.playerMatchPerformance.create({
-      data: { ...body, matchId: id },
+      data: { ...body, stats: body.stats as object, matchId: id },
     });
 
     return created(performance);

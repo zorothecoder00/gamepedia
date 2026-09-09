@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
 import { ok, created, notFound, unauthorized, forbidden, handleApiError, serverError } from "@/lib/api";
 import { getAuthUser, isStaff } from "@/lib/auth";
+import { parseBody, teamMemberCreateSchema } from "@/lib/validation";
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     const team = await db.team.findUnique({ where: { slug }, select: { id: true } });
     if (!team) return notFound("Équipe introuvable");
 
-    const { playerId, role } = await request.json() as { playerId: string; role?: string };
+    const { playerId, role } = await parseBody(request, teamMemberCreateSchema);
 
     const member = await db.teamMember.create({
       data: { teamId: team.id, playerId, role },

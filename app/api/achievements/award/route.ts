@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
-import { created, badRequest, unauthorized, forbidden, handleApiError } from "@/lib/api";
+import { created, unauthorized, forbidden, handleApiError } from "@/lib/api";
 import { getAuthUser, isStaff } from "@/lib/auth";
+import { parseBody, achievementAwardSchema } from "@/lib/validation";
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,14 +10,7 @@ export async function POST(request: NextRequest) {
     if (!actor) return unauthorized();
     if (!isStaff(actor.role)) return forbidden("Réservé à l'administration.");
 
-    const { playerId, achievementId } = await request.json() as {
-      playerId: string;
-      achievementId: string;
-    };
-
-    if (!playerId || !achievementId) {
-      return badRequest("playerId et achievementId sont requis");
-    }
+    const { playerId, achievementId } = await parseBody(request, achievementAwardSchema);
 
     const award = await db.playerAchievement.create({
       data: { playerId, achievementId },

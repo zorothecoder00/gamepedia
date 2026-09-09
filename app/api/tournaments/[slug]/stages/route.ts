@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
 import { ok, created, notFound, unauthorized, forbidden, handleApiError, serverError } from "@/lib/api";
 import { getAuthUser, isStaff } from "@/lib/auth";
+import { parseBody, tournamentStageCreateSchema } from "@/lib/validation";
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     const tournament = await db.tournament.findUnique({ where: { slug }, select: { id: true } });
     if (!tournament) return notFound("Tournoi introuvable");
 
-    const body = await request.json();
+    const body = await parseBody(request, tournamentStageCreateSchema);
     const stage = await db.tournamentStage.create({
       data: { ...body, tournamentId: tournament.id },
     });

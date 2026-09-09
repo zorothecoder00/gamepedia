@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
 import { ok, notFound, unauthorized, forbidden, handleApiError, serverError } from "@/lib/api";
 import { getAuthUser, isStaff } from "@/lib/auth";
+import { parseBody, tournamentUpdateSchema } from "@/lib/validation";
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -36,8 +37,11 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     if (!isStaff(actor.role)) return forbidden("Réservé à l'administration.");
 
     const { slug } = await params;
-    const body = await request.json();
-    const tournament = await db.tournament.update({ where: { slug }, data: body });
+    const body = await parseBody(request, tournamentUpdateSchema);
+    const tournament = await db.tournament.update({
+      where: { slug },
+      data: { ...body, sponsors: body.sponsors as object[] | undefined },
+    });
     return ok(tournament);
   } catch (e) {
     return handleApiError(e);

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
 import { ok, notFound, unauthorized, forbidden, handleApiError, serverError } from "@/lib/api";
 import { getAuthUser, isStaff } from "@/lib/auth";
+import { parseBody, gameUpdateSchema } from "@/lib/validation";
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -26,7 +27,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     if (!isStaff(actor.role)) return forbidden("Réservé à l'administration.");
 
     const { slug } = await params;
-    const body = await request.json();
+    const body = await parseBody(request, gameUpdateSchema);
     const game = await db.game.update({ where: { slug }, data: body });
     return ok(game);
   } catch (e) {

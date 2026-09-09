@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
 import { paginated, created, unauthorized, forbidden, handleApiError, serverError, getPagination } from "@/lib/api";
 import { getAuthUser, isStaff } from "@/lib/auth";
+import { parseBody, articleCreateSchema } from "@/lib/validation";
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
     if (!actor) return unauthorized();
     if (!isStaff(actor.role)) return forbidden("Réservé à l'administration.");
 
-    const body = await request.json();
+    const body = await parseBody(request, articleCreateSchema);
     const article = await db.article.create({ data: body });
     return created(article);
   } catch (e) {

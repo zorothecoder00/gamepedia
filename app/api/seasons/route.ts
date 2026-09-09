@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
 import { ok, created, unauthorized, forbidden, handleApiError, serverError } from "@/lib/api";
 import { getAuthUser, isStaff } from "@/lib/auth";
+import { parseBody, seasonCreateSchema } from "@/lib/validation";
 
 export async function GET() {
   try {
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
     if (!actor) return unauthorized();
     if (!isStaff(actor.role)) return forbidden("Réservé à l'administration.");
 
-    const body = await request.json();
+    const body = await parseBody(request, seasonCreateSchema);
     const season = await db.season.create({ data: body });
     return created(season);
   } catch (e) {

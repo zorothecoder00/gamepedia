@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/prisma";
 import { ok, notFound, unauthorized, forbidden, handleApiError, serverError } from "@/lib/api";
 import { getAuthUser, isStaff } from "@/lib/auth";
+import { parseBody, matchUpdateSchema } from "@/lib/validation";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -33,7 +34,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     if (!isStaff(actor.role)) return forbidden("Réservé à l'administration.");
 
     const { id } = await params;
-    const body = await request.json();
+    const body = await parseBody(request, matchUpdateSchema);
     const match = await db.match.update({ where: { id }, data: body });
     return ok(match);
   } catch (e) {
