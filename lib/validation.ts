@@ -134,7 +134,10 @@ const socialLinksSchema = z.record(z.string(), z.string()).optional();
 
 export const playerCreateSchema = z.object({
   pseudo: z.string().min(2).max(32),
-  userId: z.string().min(1),
+  // Optionnel : un profil joueur peut exister sans compte lié (joueur
+  // pré-enregistré par l'admin avant inscription). Player.userId est
+  // nullable côté schéma Prisma.
+  userId: z.string().min(1).optional(),
   city: z.string().max(100).optional(),
   region: z.string().max(100).optional(),
 });
@@ -244,6 +247,10 @@ export const tournamentCreateSchema = z.object({
 
 export const tournamentUpdateSchema = tournamentCreateSchema.partial().extend({
   status: z.enum(["UPCOMING", "ONGOING", "COMPLETED", "CANCELLED"]).optional(),
+});
+
+export const tournamentGameCreateSchema = z.object({
+  gameId: z.string().min(1),
 });
 
 export const tournamentParticipantCreateSchema = z

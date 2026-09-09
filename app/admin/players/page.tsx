@@ -56,11 +56,13 @@ export default function AdminPlayersPage() {
         Vérifiez, suspendez ou supprimez les profils joueurs.
       </p>
 
+      <AddPlayerForm onAdded={refetch} />
+
       <input
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Rechercher un pseudo…"
-        className="w-full max-w-sm mb-6 bg-[var(--bg-card)] border border-[var(--border)] focus:border-[var(--accent-green)] rounded-lg text-[var(--text-primary)] px-3.5 py-2 text-[0.88rem] outline-none box-border"
+        className="w-full max-w-sm mb-6 mt-6 bg-[var(--bg-card)] border border-[var(--border)] focus:border-[var(--accent-green)] rounded-lg text-[var(--text-primary)] px-3.5 py-2 text-[0.88rem] outline-none box-border"
       />
 
       {loading ? (
@@ -74,6 +76,61 @@ export default function AdminPlayersPage() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function AddPlayerForm({ onAdded }: { onAdded: () => void }) {
+  const [pseudo, setPseudo] = useState("");
+  const [city, setCity] = useState("");
+  const [region, setRegion] = useState("");
+  const create = useMutation("/api/players", "POST", undefined, "Joueur créé.");
+
+  const submit = async () => {
+    if (!pseudo.trim()) return toast.error("Le pseudo est requis.");
+    const r = await create.mutate({
+      pseudo: pseudo.trim(),
+      city: city.trim() || undefined,
+      region: region.trim() || undefined,
+    });
+    if (r) {
+      setPseudo("");
+      setCity("");
+      setRegion("");
+      onAdded();
+    }
+  };
+
+  const field =
+    "bg-[var(--bg-primary)] border border-[var(--border)] focus:border-[var(--accent-green)] rounded-lg text-[var(--text-primary)] px-2.5 py-1.5 text-[0.82rem] outline-none box-border";
+
+  return (
+    <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-4">
+      <h3 className="text-[0.85rem] font-bold text-[var(--text-primary)] mb-1">Ajouter un joueur</h3>
+      <p className="text-[0.72rem] text-[var(--text-muted)] mb-3">
+        Crée un profil joueur sans compte lié (pré-enregistrement) — le joueur pourra le rattacher à son compte plus tard.
+      </p>
+      <div className="flex gap-2 flex-wrap items-end">
+        <label className="flex flex-col gap-1 text-[0.7rem] text-[var(--text-muted)]">
+          Pseudo
+          <input value={pseudo} onChange={(e) => setPseudo(e.target.value)} placeholder="Phantom_TG" className={`${field} w-40`} />
+        </label>
+        <label className="flex flex-col gap-1 text-[0.7rem] text-[var(--text-muted)]">
+          Ville
+          <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Lomé" className={`${field} w-32`} />
+        </label>
+        <label className="flex flex-col gap-1 text-[0.7rem] text-[var(--text-muted)]">
+          Région
+          <input value={region} onChange={(e) => setRegion(e.target.value)} placeholder="Maritime" className={`${field} w-32`} />
+        </label>
+        <button
+          onClick={submit}
+          disabled={create.loading}
+          className="px-4 py-1.5 rounded-lg border-none font-semibold text-[0.82rem] cursor-pointer bg-[var(--accent-green)] text-black hover:opacity-90 disabled:opacity-50 transition-opacity"
+        >
+          {create.loading ? "…" : "Ajouter"}
+        </button>
+      </div>
     </div>
   );
 }

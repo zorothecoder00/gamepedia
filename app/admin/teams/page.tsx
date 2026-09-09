@@ -60,11 +60,13 @@ export default function AdminTeamsPage() {
         Validez (activez), modifiez ou désactivez les équipes.
       </p>
 
+      <AddTeamForm onAdded={refetch} />
+
       <input
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Rechercher une équipe…"
-        className="w-full max-w-sm mb-6 bg-[var(--bg-card)] border border-[var(--border)] focus:border-[var(--accent-green)] rounded-lg text-[var(--text-primary)] px-3.5 py-2 text-[0.88rem] outline-none box-border"
+        className="w-full max-w-sm mb-6 mt-6 bg-[var(--bg-card)] border border-[var(--border)] focus:border-[var(--accent-green)] rounded-lg text-[var(--text-primary)] px-3.5 py-2 text-[0.88rem] outline-none box-border"
       />
 
       {loading ? (
@@ -77,6 +79,75 @@ export default function AdminTeamsPage() {
             <TeamRow key={t.id} team={t} onChanged={refetch} />
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+const slugify = (s: string) =>
+  s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
+function AddTeamForm({ onAdded }: { onAdded: () => void }) {
+  const [name, setName] = useState("");
+  const [tag, setTag] = useState("");
+  const [city, setCity] = useState("");
+  const [region, setRegion] = useState("");
+  const create = useMutation("/api/teams", "POST", undefined, "Équipe créée.");
+
+  const submit = async () => {
+    if (!name.trim()) return toast.error("Le nom est requis.");
+    if (!tag.trim()) return toast.error("Le tag est requis.");
+    const r = await create.mutate({
+      name: name.trim(),
+      slug: slugify(name),
+      tag: tag.trim(),
+      city: city.trim() || undefined,
+      region: region.trim() || undefined,
+    });
+    if (r) {
+      setName("");
+      setTag("");
+      setCity("");
+      setRegion("");
+      onAdded();
+    }
+  };
+
+  const field =
+    "bg-[var(--bg-primary)] border border-[var(--border)] focus:border-[var(--accent-green)] rounded-lg text-[var(--text-primary)] px-2.5 py-1.5 text-[0.82rem] outline-none box-border";
+
+  return (
+    <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-xl p-4">
+      <h3 className="text-[0.85rem] font-bold text-[var(--text-primary)] mb-3">Ajouter une équipe</h3>
+      <div className="flex gap-2 flex-wrap items-end">
+        <label className="flex flex-col gap-1 text-[0.7rem] text-[var(--text-muted)]">
+          Nom
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Togo Esports" className={`${field} w-44`} />
+        </label>
+        <label className="flex flex-col gap-1 text-[0.7rem] text-[var(--text-muted)]">
+          Tag
+          <input value={tag} onChange={(e) => setTag(e.target.value)} placeholder="TGE" className={`${field} w-20`} />
+        </label>
+        <label className="flex flex-col gap-1 text-[0.7rem] text-[var(--text-muted)]">
+          Ville
+          <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Lomé" className={`${field} w-32`} />
+        </label>
+        <label className="flex flex-col gap-1 text-[0.7rem] text-[var(--text-muted)]">
+          Région
+          <input value={region} onChange={(e) => setRegion(e.target.value)} placeholder="Maritime" className={`${field} w-32`} />
+        </label>
+        <button
+          onClick={submit}
+          disabled={create.loading}
+          className="px-4 py-1.5 rounded-lg border-none font-semibold text-[0.82rem] cursor-pointer bg-[var(--accent-green)] text-black hover:opacity-90 disabled:opacity-50 transition-opacity"
+        >
+          {create.loading ? "…" : "Ajouter"}
+        </button>
+      </div>
+      {name.trim() && (
+        <p className="text-[0.7rem] text-[var(--text-muted)] mt-2">
+          slug : <span className="text-[var(--text-secondary)]">/{slugify(name) || "…"}</span>
+        </p>
       )}
     </div>
   );
