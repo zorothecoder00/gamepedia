@@ -50,7 +50,7 @@ interface PayoutMethod {
   createdAt: string;
 }
 
-const TABS = ["Mon profil", "Palmarès", "Achievements", "Moyens de réception", "Paramètres"];
+const TABS = ["Mon profil", "Palmarès", "Achievements", "Mes moyens de paiement", "Paramètres"];
 
 // Champs de coordonnées attendus par type de moyen de réception
 const METHOD_FIELDS: Record<PaymentMethodType, { key: string; label: string; placeholder?: string }[]> = {
@@ -458,7 +458,7 @@ export default function ProfilePage() {
                     onClick={() => setActiveTab(3)}
                     className="block w-full text-center py-2.5 rounded-lg text-sm font-medium border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                   >
-                    Moyens de réception
+                    Mes moyens de paiement
                   </button>
                   <Link href="/tournaments" className="block text-center py-2.5 rounded-lg text-sm font-medium border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
                     Voir les tournois
