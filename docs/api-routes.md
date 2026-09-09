@@ -18,7 +18,6 @@ Toutes les routes sont sous `/api/`. Le préfixe complet est `/api/[route]`.
 | `POST` | `/api/auth/password/confirm` | Confirmer le nouveau mot de passe |
 | `POST` | `/api/auth/email/resend` | Renvoyer l'email de vérification (message générique, anti-énumération) |
 | `POST` | `/api/auth/email/verify` | Consommer le token de vérification reçu par email |
-| `GET` | `/api/auth/session` | Usage interne — revérification live (isActive + rôle courant) appelée par `middleware.ts` pour les JWT « staff » |
 
 ---
 
@@ -197,7 +196,7 @@ Toutes les routes sont sous `/api/`. Le préfixe complet est `/api/[route]`.
 | `GET` | `/api/admin/disputes` | Lister les litiges de wagers (staff) |
 | `POST` | `/api/admin/disputes/[id]/resolve` | Trancher un litige de wager (staff) |
 
-Toutes les routes `/api/admin/*` sont également protégées en amont par `middleware.ts` (redirection/401 avant même d'atteindre le handler).
+Toutes les routes `/api/admin/*` sont également protégées en amont par `proxy.ts` (redirection/401 avant même d'atteindre le handler).
 
 ---
 
