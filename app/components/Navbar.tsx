@@ -73,6 +73,14 @@ export default function Navbar() {
         <div className="flex items-center gap-2">
           {isAuthenticated ? (
             <>
+              {(me?.role === "ADMIN" || me?.role === "MODERATOR") && (
+                <Link
+                  href="/admin"
+                  className="hidden md:inline-flex px-3.5 py-1.5 rounded-md text-sm font-semibold text-[var(--accent-red)] no-underline border border-[rgba(255,68,68,0.35)] hover:bg-[rgba(255,68,68,0.08)] transition-colors"
+                >
+                  Admin
+                </Link>
+              )}
               <NotificationBell />
               <Link
                 href="/profile"
@@ -146,6 +154,15 @@ export default function Navbar() {
               </Link>
             );
           })}
+          {isAuthenticated && (me?.role === "ADMIN" || me?.role === "MODERATOR") && (
+            <Link
+              href="/admin"
+              onClick={() => setMenuOpen(false)}
+              className="mt-3 text-center py-2 rounded-md text-sm font-semibold text-[var(--accent-red)] no-underline border border-[rgba(255,68,68,0.35)]"
+            >
+              Admin
+            </Link>
+          )}
           <div className="flex gap-2 mt-3 pt-3 border-t border-[var(--border)]">
             {isAuthenticated ? (
               <>
